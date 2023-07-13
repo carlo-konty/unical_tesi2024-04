@@ -27,12 +27,12 @@ public class QueryBuilder {
     }
 
     //costruisce la join in base alla chiave esterna che ricavo dalle query sulle viste di sistema (ipotesi le chiavi non sono composte)
-    public static String join(String schema, String table1, String table2, MetaDataDTO dto) {
+    public static String join(String schema, String table, MetaDataDTO dto) {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT * FROM ");
-        sb.append(schema + "." + table1 + " t0 ");
+        sb.append(schema + "." + table + " t0 ");
         sb.append("JOIN ");
-        sb.append(schema + "." + table2 + " t1 ");
+        sb.append(schema + "." + dto.getFkTableName() + " t1 ");
         sb.append("ON ");
         sb.append("t0." + dto.getReferencedColumnName());
         sb.append(" = ");

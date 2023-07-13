@@ -1,6 +1,5 @@
 package com.tesi.unical.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tesi.unical.entity.dto.ColumnMetaData;
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import com.tesi.unical.service.informationSchema.InformationSchemaService;
@@ -13,8 +12,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileWriter;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -49,6 +47,7 @@ public class MigrationService {
         PreparedStatement preparedStatement;
         String query;
         File file;
+        Map<String,List<JSONObject>> foreignKeys = new HashMap<>();
         try {
             connection = DriverManager.getConnection(url,user,psw);
             List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
@@ -66,22 +65,35 @@ public class MigrationService {
             //
             //
             //creare le liste delle tabelle collegate se serve
-            query = QueryBuilder.join(schema,table,"orders", metaDataDTOList.get(0));
-            resultSet = statement.executeQuery(query);
-            log.info(query);
-            List<ColumnMetaData> secondaTabella = this.informationSchemaService.getColumnMetaDataByTable(schema,"orders");
-            columnMetaData.addAll(secondaTabella);
-            while(resultSet.next()) {
-                Object o;
-                JSONObject json = new JSONObject();
-                for(int i=0; i<columnMetaData.size(); i++) {
-                    o = resultSet.getObject(i+1);
-                    json.put(columnMetaData.get(i).getColumnName(),o);
+            if(metaDataDTOList != null && !metaDataDTOList.isEmpty()) {
+                for(MetaDataDTO dto : metaDataDTOList) {
+                    query = QueryBuilder.join(schema,table,dto);
+                    resultSet = statement.executeQuery(query);
+                    log.info(query);
+                    foreignKeys.put(dto.getFkTableName(),fillJsonListByColumnName(resultSet,this.informationSchemaService.getColumnMetaDataByTable(schema,dto.getFkTableName())));
                 }
-                if(!resultSet.isLast())
-                    writer.append(json.toString() + ",\n");
-                else
-                    writer.append(json.toString());
+            }
+            //crea se serve il json finale
+            //
+            //embeddedJson(List<JsonObject>, Map<String,List<JsonList>>);
+            //referenceJson(List<JsonObject>, Map<String,List<JsonList>>);
+            for(JSONObject json : jsonList) {
+                for(String key : foreignKeys.keySet()) { //si spera che ci siano poche chiavi
+                    List<JSONObject> foreignJsonList = foreignKeys.get(key);
+                    for(JSONObject foreignJson : foreignJsonList) {
+                        if(json.isEmpty());
+                    }
+                }
+            }
+            //scrive su file
+            //
+            //
+            writer.append(jsonList + "\n");
+            if(!foreignKeys.isEmpty()) {
+                if(metaDataDTOList != null && !metaDataDTOList.isEmpty()) {
+                    for(MetaDataDTO dto : metaDataDTOList)
+                        writer.append(foreignKeys.get(dto.getFkTableName()).toString() + "\n");
+                }
             }
             writer.close();
         } catch (Exception e) {
@@ -99,6 +111,24 @@ public class MigrationService {
                 for(int i=0; i<columnMetaDataList.size(); i++) {
                     column = resultSet.getObject(i+1);
                     json.put(columnMetaDataList.get(i).getColumnName(),column);
+                }
+                result.add(json);
+            }
+        } catch (Exception e) {
+            log.error("ERROR FETCHING ROW");
+        }
+        return result;
+    }
+
+    private List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
+        List<JSONObject> result = new ArrayList<>();
+        try {
+            while(resultSet.next()) {
+                Object column;
+                JSONObject json = new JSONObject();
+                for(ColumnMetaData dto : columnMetaDataList) {
+                    column = resultSet.getObject(dto.getColumnName());
+                    json.put(dto.getColumnName(),column);
                 }
                 result.add(json);
             }

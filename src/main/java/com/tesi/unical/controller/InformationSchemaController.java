@@ -36,4 +36,9 @@ public class InformationSchemaController {
         return ResponseEntity.ok(this.informationSchemaService.getDBMetaData(schema, table));
     }
 
+    @GetMapping("/keys")
+    public ResponseEntity getPrimaryKey(@RequestParam("schema") String schema, @RequestParam("table") String table) {
+        return ResponseEntity.ok(this.informationSchemaService.getPrimaryKey(schema, table));
+    }
+
 }

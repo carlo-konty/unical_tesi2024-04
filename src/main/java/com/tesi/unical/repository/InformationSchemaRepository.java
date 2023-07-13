@@ -59,4 +59,14 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "from information_schema.\"tables\" t\n" +
             "where t.table_schema = :schema",nativeQuery = true)
     List<String> getAllTables(@Param("schema") String schema);
+
+    @Query(value = "SELECT T2.COLUMN_NAME\n" +
+            "FROM INFORMATION_SCHEMA.Table_constraints T1\n" +
+            "JOIN INFORMATION_SCHEMA.key_column_usage T2\n" +
+            "ON T1.table_name = T2.table_name\n" +
+            "WHERE T1.table_schema = :schema\n" +
+            "and T1.table_name = :table\n" +
+            "and T1.constraint_type = 'PRIMARY KEY'\n" +
+            "and t2.position_in_unique_constraint is null",nativeQuery = true)
+    List<String> getPrimaryKey(@Param("schema") String schema, @Param("table") String table);
 }
