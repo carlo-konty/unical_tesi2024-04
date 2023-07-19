@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
+import javax.sql.DataSource;
 import java.io.FileWriter;
 import java.sql.*;
 import java.util.*;
@@ -28,9 +28,6 @@ public class MigrationService {
     @Autowired
     private InformationSchemaService informationSchemaService;
 
-    @Autowired
-    private RelationshipCheck relationshipCheck;
-
     //conosco i tipi delle colonne grazie a ColumnMetaData (andrebbero mappati per castati correttamente)
     private List<String> columnsType(String schema, String table) {
         List<String> result = new ArrayList<>();
@@ -41,69 +38,107 @@ public class MigrationService {
         return result;
     }
 
-    //possibile check per evitare di passare tabelle che non esistono o per evitare problemi di sicurezza (sql injection?)
-    public String migrate(String schema, String table) { //embedding
+    public String migrateReference(String schema, String table) {
+        return null;
+    }
+
+    /*
+    il servizio serve per migrare secondo la metodologia embedding, cioè inseriamo tutte le relazioni come array di
+    json all'interno del documento che stiamo creando
+     */
+    public String migrateEmbedding(String schema, String table) { //embedding
+        //check sulle possibili tabelle
+        this.checkTable(schema,table);
+        //inizializzazione variabili
         Connection connection;
-        PreparedStatement preparedStatement;
         String query;
-        File file;
+        List<JSONObject> mainTableJsonList;
         Map<String,List<JSONObject>> foreignKeys = new HashMap<>();
+        //recupero metadati
+        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getDBMetaData(schema,table);
+        String primaryKey = this.informationSchemaService.getPrimaryKey(schema,table);
         try {
+            //get connection
             connection = DriverManager.getConnection(url,user,psw);
-            List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
-            List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getDBMetaData(schema,table);
-            log.info("cmetadata: {}",columnMetaData.isEmpty());
             query = QueryBuilder.selectAll(schema,table,columnMetaData);
             log.info(query);
-            FileWriter writer = new FileWriter("C:\\Users\\Giuseppe\\OneDrive\\Desktop\\user.txt");
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            List<JSONObject> jsonList = fillJsonList(resultSet,columnMetaData);
+            mainTableJsonList = fillJsonList(resultSet,columnMetaData);
             //
             //
             //creare le liste delle tabelle collegate se serve
             if(metaDataDTOList != null && !metaDataDTOList.isEmpty()) {
+                log.info("String metadata size: {}",metaDataDTOList.size());
                 for(MetaDataDTO dto : metaDataDTOList) {
                     query = QueryBuilder.join(schema,table,dto);
                     resultSet = statement.executeQuery(query);
                     log.info(query);
-                    foreignKeys.put(dto.getFkTableName(),fillJsonListByColumnName(resultSet,this.informationSchemaService.getColumnMetaDataByTable(schema,dto.getFkTableName())));
+                    String fkTableName = dto.getFkTableName();
+                    List<JSONObject> fkResultSet = fillJsonListByColumnName(resultSet,this.informationSchemaService.getColumnMetaDataByTable(schema,dto.getFkTableName()));
+                    log.info("fkTableName: {}",fkTableName);
+                    log.info("fkResultSet size: {}",fkResultSet.size());
+                    foreignKeys.put(fkTableName,fkResultSet);
                 }
             }
             //crea se serve il json finale
             //
-            //embeddedJson(List<JsonObject>, Map<String,List<JsonList>>);
-            //referenceJson(List<JsonObject>, Map<String,List<JsonList>>);
-            for(JSONObject json : jsonList) {
-                for(String key : foreignKeys.keySet()) { //si spera che ci siano poche chiavi
-                    List<JSONObject> foreignJsonList = foreignKeys.get(key);
-                    for(JSONObject foreignJson : foreignJsonList) {
-                        if(json.isEmpty());
-                    }
-                }
-            }
-            //scrive su file
-            //
-            //
-            writer.append(jsonList + "\n");
-            if(!foreignKeys.isEmpty()) {
-                if(metaDataDTOList != null && !metaDataDTOList.isEmpty()) {
-                    for(MetaDataDTO dto : metaDataDTOList)
-                        writer.append(foreignKeys.get(dto.getFkTableName()).toString() + "\n");
-                }
-            }
-            writer.close();
+            this.embeddedJson(primaryKey,mainTableJsonList,foreignKeys);
         } catch (Exception e) {
             return e.getMessage();
         }
-        return "ok";
+        //scrive su file
+        //
+        //
+        return this.write(table,mainTableJsonList).toString();
+    }
+
+    private Boolean embeddedJson(String primaryKey, List<JSONObject> mainTableJsonList, Map<String,List<JSONObject>> foreignKeys) {
+        try {
+            for(JSONObject json : mainTableJsonList) {
+                for(String key : foreignKeys.keySet()) { //si spera che ci siano poche chiavi e dunque poche dipendenze
+                    List<JSONObject> foreignJsonList = foreignKeys.get(key);
+                    List<JSONObject> referencedJson = new LinkedList<>();
+                    for(JSONObject foreignJson : foreignJsonList) {
+                        Object pk = json.get(primaryKey);
+                        Object fk = foreignJson.get(primaryKey);
+                        log.info("json: {}", foreignJson );
+                        JSONObject jsonObject = new JSONObject(foreignJson.toString());
+                        jsonObject.remove(primaryKey);
+                        if(pk.equals(fk)) {
+                            referencedJson.add(jsonObject);
+                        }
+                    }
+                    json.put(key,referencedJson);
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("Error: {}",e.getMessage());
+            return false;
+        }
+    }
+
+    private Boolean write(String table,List<JSONObject> listToWrite) {
+        try {
+            FileWriter writer = new FileWriter("C:\\Users\\Giuseppe\\OneDrive\\Desktop\\" + table + ".txt");
+            for(JSONObject json : listToWrite) {
+                writer.append(json + "\n");
+            }
+            writer.close();
+            return true;
+        } catch (Exception e) {
+            log.error("Exception: {}",e.getMessage());
+            return false;
+        }
     }
 
     private List<JSONObject> fillJsonList(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
-        List<JSONObject> result = new ArrayList<>();
+        List<JSONObject> result = new LinkedList<>();
         try {
             while(resultSet.next()) {
                 Object column;
@@ -121,7 +156,7 @@ public class MigrationService {
     }
 
     private List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
-        List<JSONObject> result = new ArrayList<>();
+        List<JSONObject> result = new LinkedList<>();
         try {
             while(resultSet.next()) {
                 Object column;
@@ -138,20 +173,9 @@ public class MigrationService {
         return result;
     }
 
-
-
-    //create json (passo il result set e il json da creare)
-    //
-    private JSONObject embeddingJson(ResultSet resultSet) { //crea l'array di json correlati alla tabella
-        return null;
+    private void checkTable(String schema, String table) {
+        List<String> tablesList = this.informationSchemaService.getAllTables(schema);
+        if(!tablesList.contains(table))
+            throw new RuntimeException("La tabella non esiste");
     }
-
-    private JSONObject referenceJson(ResultSet resultSet) { return null; }
-
-    //switch con i tipi più comuni
-
-    //scrive sul file
-
-
-
 }

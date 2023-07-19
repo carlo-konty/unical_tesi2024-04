@@ -7,10 +7,6 @@ import java.util.List;
 
 public class QueryBuilder {
 
-    public static String ciao() {
-        return "ciao";
-    }
-
     public static String selectAll(String schema, String table, List<ColumnMetaData> columns) {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT ");

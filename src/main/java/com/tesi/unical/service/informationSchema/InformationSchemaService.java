@@ -31,7 +31,7 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
         return this.informationSchemaRepository.getAllTables(schema);
     }
 
-    public List<String> getPrimaryKey(String schema, String table) {
+    public String getPrimaryKey(String schema, String table) {
         return this.informationSchemaRepository.getPrimaryKey(schema,table);
     }
 }

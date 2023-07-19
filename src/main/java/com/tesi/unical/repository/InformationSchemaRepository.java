@@ -68,5 +68,5 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "and T1.table_name = :table\n" +
             "and T1.constraint_type = 'PRIMARY KEY'\n" +
             "and t2.position_in_unique_constraint is null",nativeQuery = true)
-    List<String> getPrimaryKey(@Param("schema") String schema, @Param("table") String table);
+    String getPrimaryKey(@Param("schema") String schema, @Param("table") String table);
 }
