@@ -7,6 +7,7 @@ import com.tesi.unical.repository.InformationSchemaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -33,5 +34,20 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
 
     public String getPrimaryKey(String schema, String table) {
         return this.informationSchemaRepository.getPrimaryKey(schema,table);
+    }
+
+    public List<String> columnsType(String schema, String table) {
+        List<String> result = new ArrayList<>();
+        List<ColumnMetaData> columnMetaData = this.getColumnMetaDataByTable(schema, table);
+        for(ColumnMetaData dto : columnMetaData) {
+            result.add(dto.getDataType());
+        }
+        return result;
+    }
+
+    public void checkTable(String schema, String table) {
+        List<String> tablesList = this.getAllTables(schema);
+        if(!tablesList.contains(table))
+            throw new RuntimeException("La tabella non esiste");
     }
 }

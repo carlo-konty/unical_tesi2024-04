@@ -18,7 +18,14 @@ public class QueryBuilder {
                 sb.append("\n");
         }
         sb.append("FROM ");
-        sb.append(schema + "." + table + ";");
+        sb.append(schema + "." + table);
+        return sb.toString();
+    }
+
+    public static String countAll(String schema, String table) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT COUNT(*) FROM ");
+        sb.append(schema + "." + table);
         return sb.toString();
     }
 
@@ -32,7 +39,13 @@ public class QueryBuilder {
         sb.append("ON ");
         sb.append("t0." + dto.getReferencedColumnName());
         sb.append(" = ");
-        sb.append("t1." + dto.getFkColumnName() + ";");
+        sb.append("t1." + dto.getFkColumnName());
+        return sb.toString();
+    }
+
+    public static String fetchNRowsOnly(String query, Integer nrows) {
+        StringBuilder sb = new StringBuilder(query);
+        sb.append("FETCH FIRST " + nrows + " ROWS ONLY");
         return sb.toString();
     }
 }

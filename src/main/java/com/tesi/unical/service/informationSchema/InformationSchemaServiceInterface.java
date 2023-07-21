@@ -12,5 +12,7 @@ public interface InformationSchemaServiceInterface {
     List<ColumnMetaData> getColumnMetaDataByTable(String schema, String table);
     List<TableMetaData> getTableMetaDataBySchema(String schema);
     List<String> getAllTables(String schema);
+    List<String> columnsType(String schema, String table);
+    void checkTable(String schema, String table);
 
 }

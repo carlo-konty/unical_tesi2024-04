@@ -28,4 +28,12 @@ public class TestController {
         }
     }
 
+    @GetMapping("/reference")
+    public ResponseEntity referenceMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
+        try {
+            return ResponseEntity.ok(this.migrationService.migrateReference(schema, table));
+        } catch (Exception e) {
+            return ResponseEntity.ok(e.getMessage());
+        }
+    }
 }
