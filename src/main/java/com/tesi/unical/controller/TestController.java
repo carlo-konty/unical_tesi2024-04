@@ -36,4 +36,13 @@ public class TestController {
             return ResponseEntity.ok(e.getMessage());
         }
     }
+
+    @GetMapping("/count")
+    public ResponseEntity count() {
+        try {
+            return ResponseEntity.ok(this.migrationService.testCount());
+        } catch (Exception e) {
+            return ResponseEntity.ok(e.getMessage());
+        }
+    }
 }

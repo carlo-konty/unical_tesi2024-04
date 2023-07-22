@@ -5,30 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
 public class JsonUtils {
-
-    public static List<JSONObject> fillJsonList(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
-        List<JSONObject> result = new LinkedList<>();
-        try {
-            while(resultSet.next()) {
-                Object column;
-                JSONObject json = new JSONObject();
-                for(int i=0; i<columnMetaDataList.size(); i++) {
-                    column = resultSet.getObject(i+1);
-                    json.put(columnMetaDataList.get(i).getColumnName(),column);
-                }
-                result.add(json);
-            }
-        } catch (Exception e) {
-            log.error("ERROR FETCHING ROW");
-        }
-        return result;
-    }
 
     public static List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();
@@ -71,5 +55,23 @@ public class JsonUtils {
             log.error("Error: {}",e.getMessage());
             return false;
         }
+    }
+
+    public static Map<Long,List<Object>> extractResultSet(ResultSet resultSet) {
+        Map<Long,List<Object>> result = new HashMap<>();
+        try {
+            while (resultSet.next()) {
+                List<Object> row = new LinkedList<>();
+                ResultSetMetaData metaData = resultSet.getMetaData();
+                Long rowId = 1L;
+                for(int i=1; i<=metaData.getColumnCount(); i++) {
+                    row.add(resultSet.getObject(i));
+                }
+                result.put(rowId,row);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+        return result;
     }
 }

@@ -52,7 +52,7 @@ public class MigrationService {
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonList(resultSet, columnMetaData);
+            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
             //
             //
         } catch (Exception e) {
@@ -88,7 +88,7 @@ public class MigrationService {
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonList(resultSet,columnMetaData);
+            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet,columnMetaData);
             //
             //
             //creare le liste delle tabelle collegate se serve
@@ -116,4 +116,22 @@ public class MigrationService {
         //
         return FileUtils.write(table,mainTableJsonList).toString();
     }
+
+    public String testCount() {
+        Connection connection;
+        String query;
+        Map<Long,List<Object>> result = new HashMap<>();
+        try {
+            connection = DriverManager.getConnection(url,user,psw);
+            query = QueryBuilder.countAll("migration","customers");
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            result = JsonUtils.extractResultSet(resultSet);
+        } catch (Exception e ){
+            return e.getMessage();
+        }
+        return result.toString();
+    }
+
+
 }
