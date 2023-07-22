@@ -45,7 +45,7 @@ public class MigrationService {
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
-            query = QueryBuilder.selectAll(schema, table, columnMetaData);
+            query = QueryBuilder.selectAll(schema, table);
             log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
@@ -81,7 +81,7 @@ public class MigrationService {
         try {
             //get connection
             connection = DriverManager.getConnection(url,user,psw);
-            query = QueryBuilder.selectAll(schema,table,columnMetaData);
+            query = QueryBuilder.selectAll(schema,table);
             log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
@@ -95,7 +95,7 @@ public class MigrationService {
             if(metaDataDTOList != null && !metaDataDTOList.isEmpty()) {
                 log.info("String metadata size: {}",metaDataDTOList.size());
                 for(MetaDataDTO dto : metaDataDTOList) {
-                    query = QueryBuilder.join(schema,table,dto);
+                    query = QueryBuilder.join2Tables(schema,table,dto);
                     resultSet = statement.executeQuery(query);
                     log.info(query);
                     String fkTableName = dto.getFkTableName();
@@ -120,7 +120,7 @@ public class MigrationService {
     public String testCount() {
         Connection connection;
         String query;
-        Map<Long,List<Object>> result = new HashMap<>();
+        Map<Long,List<Object>> result;
         try {
             connection = DriverManager.getConnection(url,user,psw);
             query = QueryBuilder.countAll("migration","customers");
@@ -132,6 +132,25 @@ public class MigrationService {
         }
         return result.toString();
     }
+
+    public String testFetch() {
+        Connection connection;
+        String query;
+        Map<Long,List<Object>> result;
+        try {
+            connection = DriverManager.getConnection(url,user,psw);
+            query = QueryBuilder.selectAll("migration","customers");
+            query = QueryBuilder.fetchNRowsOnly(query,10);
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            result = JsonUtils.extractResultSet(resultSet);
+        } catch (Exception e ){
+            return e.getMessage();
+        }
+        return result.toString();
+    }
+
+
 
 
 }

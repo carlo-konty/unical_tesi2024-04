@@ -60,14 +60,15 @@ public class JsonUtils {
     public static Map<Long,List<Object>> extractResultSet(ResultSet resultSet) {
         Map<Long,List<Object>> result = new HashMap<>();
         try {
+            Long rowId = 1L;
             while (resultSet.next()) {
                 List<Object> row = new LinkedList<>();
                 ResultSetMetaData metaData = resultSet.getMetaData();
-                Long rowId = 1L;
                 for(int i=1; i<=metaData.getColumnCount(); i++) {
                     row.add(resultSet.getObject(i));
                 }
                 result.put(rowId,row);
+                rowId++;
             }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());

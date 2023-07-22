@@ -45,4 +45,13 @@ public class TestController {
             return ResponseEntity.ok(e.getMessage());
         }
     }
+
+    @GetMapping("/fetch")
+    public ResponseEntity fetch() {
+        try {
+            return ResponseEntity.ok(this.migrationService.testFetch());
+        } catch (Exception e) {
+            return ResponseEntity.ok(e.getMessage());
+        }
+    }
 }

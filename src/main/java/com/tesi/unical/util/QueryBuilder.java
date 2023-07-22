@@ -7,16 +7,9 @@ import java.util.List;
 
 public class QueryBuilder {
 
-    public static String selectAll(String schema, String table, List<ColumnMetaData> columns) {
+    public static String selectAll(String schema, String table) {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT ");
-        for(int i=0; i<columns.size(); i++) {
-            sb.append(columns.get(i).getColumnName());
-            if(i< columns.size()-1)
-                sb.append(",\n");
-            else
-                sb.append("\n");
-        }
+        sb.append("SELECT * ");
         sb.append("FROM ");
         sb.append(schema + "." + table);
         return sb.toString();
@@ -30,7 +23,7 @@ public class QueryBuilder {
     }
 
     //costruisce la join in base alla chiave esterna che ricavo dalle query sulle viste di sistema (ipotesi le chiavi non sono composte)
-    public static String join(String schema, String table, MetaDataDTO dto) {
+    public static String join2Tables(String schema, String table, MetaDataDTO dto) {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT * FROM ");
         sb.append(schema + "." + table + " t0 ");
@@ -45,7 +38,7 @@ public class QueryBuilder {
 
     public static String fetchNRowsOnly(String query, Integer nrows) {
         StringBuilder sb = new StringBuilder(query);
-        sb.append("FETCH FIRST " + nrows + " ROWS ONLY");
+        sb.append(" FETCH FIRST " + nrows + " ROWS ONLY");
         return sb.toString();
     }
 }
