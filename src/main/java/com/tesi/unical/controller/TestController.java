@@ -20,7 +20,7 @@ public class TestController {
     private MigrationService migrationService;
 
     @GetMapping("/embedding")
-    public ResponseEntity embeddingMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
+    public ResponseEntity<String> embeddingMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
         try {
             return ResponseEntity.ok(this.migrationService.migrateEmbedding(schema, table));
         } catch (Exception e) {
@@ -29,7 +29,7 @@ public class TestController {
     }
 
     @GetMapping("/reference")
-    public ResponseEntity referenceMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
+    public ResponseEntity<String> referenceMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
         try {
             return ResponseEntity.ok(this.migrationService.migrateReference(schema, table));
         } catch (Exception e) {
@@ -38,7 +38,7 @@ public class TestController {
     }
 
     @GetMapping("/count")
-    public ResponseEntity count() {
+    public ResponseEntity<String> count() {
         try {
             return ResponseEntity.ok(this.migrationService.testCount());
         } catch (Exception e) {
@@ -47,7 +47,7 @@ public class TestController {
     }
 
     @GetMapping("/fetch")
-    public ResponseEntity fetch() {
+    public ResponseEntity<String> fetch() {
         try {
             return ResponseEntity.ok(this.migrationService.testFetch());
         } catch (Exception e) {
