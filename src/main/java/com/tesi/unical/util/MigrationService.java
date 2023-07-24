@@ -3,6 +3,9 @@ package com.tesi.unical.util;
 import com.tesi.unical.entity.dto.ColumnMetaData;
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import com.tesi.unical.service.informationSchema.InformationSchemaService;
+import com.tesi.unical.util.file.FileUtils;
+import com.tesi.unical.util.file.JsonUtils;
+import com.tesi.unical.util.file.ParallelFileWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,6 +150,36 @@ public class MigrationService {
             return e.getMessage();
         }
         return result.toString();
+    }
+
+    public String testThreadResultSet(String schema, String table) {
+        //check sulle possibili tabelle
+        this.informationSchemaService.checkTable(schema,table);
+        //inizializzazione variabili
+        Connection connection;
+        String query;
+        List<JSONObject> mainTableJsonList;
+        //recupero metadati
+        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        try {
+            //get connection
+            connection = DriverManager.getConnection(url, user, psw);
+            query = QueryBuilder.selectAll(schema, table);
+            log.info(query);
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
+            //
+            //
+            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            //
+            //test thread
+            String filePath = FileUtils.fileNameBuilder(table);
+            startThread(mainTableJsonList,filePath);
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+        return "OK";
     }
 
     public String testThread(String schema, String table) {

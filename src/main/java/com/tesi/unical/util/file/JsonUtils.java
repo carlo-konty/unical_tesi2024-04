@@ -1,4 +1,4 @@
-package com.tesi.unical.util;
+package com.tesi.unical.util.file;
 
 import com.tesi.unical.entity.dto.ColumnMetaData;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +69,23 @@ public class JsonUtils {
                 }
                 result.put(rowId,row);
                 rowId++;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+        return result;
+    }
+
+    public static List<Object> objectList(ResultSet resultSet) {
+        List<Object> result = new LinkedList<>();
+        try {
+            while (resultSet.next()) {
+                List<Object> row = new LinkedList<>();
+                ResultSetMetaData metaData = resultSet.getMetaData();
+                for(int i=1; i<=metaData.getColumnCount(); i++) {
+                    row.add(resultSet.getObject(i));
+                }
+                result.add(row);
             }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
