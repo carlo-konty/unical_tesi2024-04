@@ -23,6 +23,8 @@ public class MigrationService {
     @Value("${spring.datasource.username}")
     private String user;
 
+    private final int NUM_THREAD = 16;
+
     @Autowired
     private InformationSchemaService informationSchemaService;
 
@@ -37,11 +39,8 @@ public class MigrationService {
         Connection connection;
         String query;
         List<JSONObject> mainTableJsonList;
-        Map<String,List<JSONObject>> foreignKeys = new HashMap<>();
         //recupero metadati
         List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
-        List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getDBMetaData(schema,table);
-        String primaryKey = this.informationSchemaService.getPrimaryKey(schema,table);
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
@@ -148,6 +147,63 @@ public class MigrationService {
             return e.getMessage();
         }
         return result.toString();
+    }
+
+    public String testThread(String schema, String table) {
+        //check sulle possibili tabelle
+        this.informationSchemaService.checkTable(schema,table);
+        //inizializzazione variabili
+        Connection connection;
+        String query;
+        List<JSONObject> mainTableJsonList;
+        //recupero metadati
+        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        try {
+            //get connection
+            connection = DriverManager.getConnection(url, user, psw);
+            query = QueryBuilder.selectAll(schema, table);
+            log.info(query);
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
+            //
+            //
+            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            //
+            //test thread
+            String filePath = FileUtils.fileNameBuilder(table);
+            startThread(mainTableJsonList,filePath);
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+        return "OK";
+    }
+
+    private void startThread(List<JSONObject> list, String filePath) {
+        int elementsPerThread = list.size() / NUM_THREAD;
+        log.info("el: {}",elementsPerThread);
+        int remainingElements = list.size() % NUM_THREAD;
+        log.info("re: {}",remainingElements);
+        //
+        int startIndex = 0;
+        log.info("start: {}",startIndex);
+        int endIndex = elementsPerThread + (remainingElements > 0 ? 1 : 0);
+        log.info("end: {}",endIndex);
+        //
+        for (int i = 0; i < NUM_THREAD; i++) {
+            if(i==NUM_THREAD-1) {
+                endIndex--;
+            }
+            List<JSONObject> subArray = list.subList(startIndex,endIndex);
+            Thread thread = new Thread(new ParallelFileWriter(filePath,subArray));
+            thread.start();
+            //
+            startIndex = endIndex;
+            log.info("start: {}",startIndex);
+            endIndex = startIndex + elementsPerThread + (remainingElements > 0 ? 1 : 0);
+            log.info("end: {}",endIndex);
+            remainingElements--;
+        }
     }
 
 

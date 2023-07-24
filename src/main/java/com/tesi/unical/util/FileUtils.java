@@ -10,9 +10,11 @@ import java.util.List;
 @Slf4j
 public class FileUtils {
 
+    private static final String FILE_PATH = "C:\\Users\\Giuseppe\\OneDrive\\Desktop\\";
+
     public static Boolean write(String table, List<JSONObject> listToWrite) {
         try {
-            String fileName = getFileName("C:\\Users\\Giuseppe\\OneDrive\\Desktop\\" + table);
+            String fileName = getFileName(FILE_PATH + table);
             FileWriter writer = new FileWriter(fileName);
             for(JSONObject json : listToWrite) {
                 writer.append(json + "\n");
@@ -25,18 +27,19 @@ public class FileUtils {
         }
     }
 
+    public static String fileNameBuilder(String table) {
+        return getFileName(FILE_PATH + table);
+    }
+
     private static String getFileName(String fileName) {
         String name = fileName;
-        log.info("name: {}",name);
         boolean exists = checkFile(fileName + ".txt");
         int i = 1;
-        log.info("exists: {}",exists);
         while(exists) {
             if(exists) {
                 name = fileName + " (" + i + ")";
             }
             exists = checkFile(name + ".txt");
-            log.info("exists2: {}",exists);
             i++;
         }
         return name + ".txt";

@@ -54,4 +54,13 @@ public class TestController {
             return ResponseEntity.ok(e.getMessage());
         }
     }
+
+    @GetMapping("/thread")
+    public ResponseEntity<String> thread() {
+        try {
+            return ResponseEntity.ok(this.migrationService.testThread("migration","customers"));
+        } catch (Exception e) {
+            return ResponseEntity.ok(e.getMessage());
+        }
+    }
 }
