@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class FileUtils {
@@ -18,6 +19,23 @@ public class FileUtils {
             FileWriter writer = new FileWriter(fileName);
             for(JSONObject json : listToWrite) {
                 writer.append(json + "\n");
+            }
+            writer.close();
+            return true;
+        } catch (Exception e) {
+            log.error("Exception: {}",e.getMessage());
+            return false;
+        }
+    }
+
+    public static Boolean write(String table, Map<Long,List<JSONObject>> map) {
+        try {
+            String fileName = getFileName(FILE_PATH + table);
+            FileWriter writer = new FileWriter(fileName,true);
+            for(Map.Entry<Long,List<JSONObject>> row : map.entrySet()) {
+                for(JSONObject jsonObject : row.getValue()) {
+                    writer.write(jsonObject + "\n");
+                }
             }
             writer.close();
             return true;

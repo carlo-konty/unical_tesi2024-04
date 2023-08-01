@@ -6,6 +6,7 @@ import com.tesi.unical.service.informationSchema.InformationSchemaService;
 import com.tesi.unical.util.file.FileUtils;
 import com.tesi.unical.util.file.JsonUtils;
 import com.tesi.unical.util.file.ParallelFileWriter;
+import com.tesi.unical.util.file.ParallelJsonBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -51,10 +53,11 @@ public class MigrationService {
             log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
+            JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaData);
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            mainTableJsonList = jsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
             //
             //
         } catch (Exception e) {
@@ -87,10 +90,11 @@ public class MigrationService {
             log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
+            JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaData);
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet,columnMetaData);
+            mainTableJsonList = jsonUtils.fillJsonListByColumnName(resultSet,columnMetaData);
             //
             //
             //creare le liste delle tabelle collegate se serve
@@ -101,7 +105,8 @@ public class MigrationService {
                     resultSet = statement.executeQuery(query);
                     log.info(query);
                     String fkTableName = dto.getFkTableName();
-                    List<JSONObject> fkResultSet = JsonUtils.fillJsonListByColumnName(resultSet,this.informationSchemaService.getColumnMetaDataByTable(schema,dto.getFkTableName()));
+
+                    List<JSONObject> fkResultSet = jsonUtils.fillJsonListByColumnName(resultSet,this.informationSchemaService.getColumnMetaDataByTable(schema,dto.getFkTableName()));
                     log.info("fkTableName: {}",fkTableName);
                     log.info("fkResultSet size: {}",fkResultSet.size());
                     foreignKeys.put(fkTableName,fkResultSet);
@@ -126,6 +131,10 @@ public class MigrationService {
         try {
             connection = DriverManager.getConnection(url,user,psw);
             query = QueryBuilder.countAll("migration","customers");
+            log.info(query);
+            query = QueryBuilder.selectAll("migration","customers");
+            log.info(query);
+            query = QueryBuilder.count(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
             result = JsonUtils.extractResultSet(resultSet);
@@ -165,23 +174,44 @@ public class MigrationService {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
             query = QueryBuilder.selectAll(schema, table);
-            log.info(query);
+            //count query
+            String countQuery = QueryBuilder.count(query);
             Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
+            ResultSet resultSet = statement.executeQuery(countQuery);
+            //
+            int count =  JsonUtils.getCount(resultSet);
+            log.info("count: {}",count);
+            int rowPerThread = count / NUM_THREAD;
+            int remainsRow = count % NUM_THREAD;
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            ConcurrentHashMap<Long,List<JSONObject>> map = new ConcurrentHashMap<>();
+            int limit = rowPerThread;
+            int offset = rowPerThread + (remainsRow > 0 ? 1 : 0);
+            //partenza thread
+            for(Long i = 1L; i<=NUM_THREAD; i++) {
+                String subQuery = QueryBuilder.limit(query,limit,offset);
+                Statement st = connection.createStatement();
+                ResultSet rs = st.executeQuery(subQuery);
+                Thread thread = new Thread(new ParallelJsonBuilder(i,rs,map,columnMetaData));
+                thread.start();
+                //
+                log.info("limit: {}",limit);
+                offset = limit + (remainsRow > 0 ? 1 : 0);
+                log.info("offset: {}",offset);
+                remainsRow--;
+            }
             //
-            //test thread
-            String filePath = FileUtils.fileNameBuilder(table);
-            startThread(mainTableJsonList,filePath);
+            //
+            //write file
+            FileUtils.write(table,map);
         } catch (Exception e) {
             return e.getMessage();
         }
         return "OK";
     }
 
+    //funziona ma non bisogna scrivere con più thread sullo stesso file altrimenti casino
     public String testThread(String schema, String table) {
         //check sulle possibili tabelle
         this.informationSchemaService.checkTable(schema,table);
@@ -201,7 +231,8 @@ public class MigrationService {
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaData);
+            mainTableJsonList = jsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
             //
             //test thread
             String filePath = FileUtils.fileNameBuilder(table);
@@ -211,6 +242,7 @@ public class MigrationService {
         }
         return "OK";
     }
+
 
     private void startThread(List<JSONObject> list, String filePath) {
         int elementsPerThread = list.size() / NUM_THREAD;

@@ -23,8 +23,8 @@ public class QueryBuilder {
 
     public static String count(String query) {
         StringBuilder sb = new StringBuilder(query);
-        sb.insert(6,"COUNT(");
-        sb.insert(15,") ");
+        sb.insert(7,"COUNT(");
+        sb.insert(15,")");
         log.info("count: {}",sb);
         return sb.toString();
     }
@@ -49,10 +49,11 @@ public class QueryBuilder {
         return sb.toString();
     }
 
-    public static String limit(String query, String limit, String offset) {
+    public static String limit(String query, int limit, int offset) {
         StringBuilder sb = new StringBuilder(query);
         sb.append(" LIMIT " + limit);
         sb.append(" OFFSET " + offset);
+        log.info("limit: {}",sb);
         return sb.toString();
     }
 }

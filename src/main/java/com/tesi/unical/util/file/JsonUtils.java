@@ -14,7 +14,15 @@ import java.util.Map;
 @Slf4j
 public class JsonUtils {
 
-    public static List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
+    private ResultSet resultSet;
+    private List<ColumnMetaData> columnMetaDataList;
+
+    public JsonUtils(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
+        this.columnMetaDataList = columnMetaDataList;
+        this.resultSet = resultSet;
+    }
+
+    public List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();
         try {
             while(resultSet.next()) {
@@ -27,7 +35,7 @@ public class JsonUtils {
                 result.add(json);
             }
         } catch (Exception e) {
-            log.error("ERROR FETCHING ROW");
+            log.error(e.getMessage());
         }
         return result;
     }
@@ -91,5 +99,14 @@ public class JsonUtils {
             throw new RuntimeException(e.getMessage());
         }
         return result;
+    }
+
+    public static int getCount(ResultSet resultSet) {
+        try {
+            resultSet.next();
+            return resultSet.getInt(1);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 }

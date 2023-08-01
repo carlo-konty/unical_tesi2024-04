@@ -58,7 +58,7 @@ public class TestController {
     @GetMapping("/thread")
     public ResponseEntity<String> thread() {
         try {
-            return ResponseEntity.ok(this.migrationService.testThread("migration","customers"));
+            return ResponseEntity.ok(this.migrationService.testThreadResultSet("migration","customers"));
         } catch (Exception e) {
             return ResponseEntity.ok(e.getMessage());
         }
