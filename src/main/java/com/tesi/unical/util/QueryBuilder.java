@@ -3,6 +3,8 @@ package com.tesi.unical.util;
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.management.QueryExp;
+
 @Slf4j
 public class QueryBuilder {
 
@@ -56,4 +58,19 @@ public class QueryBuilder {
         log.info("limit: {}",sb);
         return sb.toString();
     }
+
+    public static String where(String query) {
+        StringBuilder sb = new StringBuilder(query);
+        sb.append(" WHERE 1=1").toString();
+        log.info(sb.toString());
+        return sb.toString();
+    }
+
+    public static String and(String query, String column, String value) {
+        StringBuilder sb = new StringBuilder(query);
+        sb.append(" AND " ).append(column).append(" = ").append('\'' + value + '\'').toString();
+        log.info(sb.toString());
+        return sb.toString();
+    }
+
 }

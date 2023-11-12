@@ -16,8 +16,16 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
     @Autowired
     private InformationSchemaRepository informationSchemaRepository;
 
+    public List<String> getSchemas() {
+        return this.informationSchemaRepository.getSchemas();
+    }
+
     public List<MetaDataDTO> getDBMetaData(String schema, String table) {
         return this.informationSchemaRepository.getDbMetaData(schema,table);
+    }
+
+    public List<MetaDataDTO> getReferentialConstraintsByTable(String schema, String table) {
+        return this.informationSchemaRepository.getReferentialConstraintsByTable(schema,table);
     }
 
     public List<ColumnMetaData> getColumnMetaDataByTable(String schema, String table) {

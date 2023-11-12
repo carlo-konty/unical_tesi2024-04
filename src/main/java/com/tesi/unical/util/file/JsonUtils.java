@@ -1,6 +1,7 @@
 package com.tesi.unical.util.file;
 
 import com.tesi.unical.entity.dto.ColumnMetaData;
+import com.tesi.unical.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 
@@ -22,6 +23,14 @@ public class JsonUtils {
         this.resultSet = resultSet;
     }
 
+    public JSONObject addField(JSONObject json, String key, Object value) {
+        return new JSONObject(json.append(key,value));
+    }
+
+    public JSONObject removeField(JSONObject json, String key) {
+        return new JSONObject(json.remove(key));
+    }
+
     public List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();
         try {
@@ -39,6 +48,24 @@ public class JsonUtils {
         }
         return result;
     }
+
+    public JSONObject fillJsonByFieldsName(List<Object> row, List<ColumnMetaData> columnMetaDataList) {
+        if(Utils.isCollectionEmpty(row) || Utils.isCollectionEmpty(columnMetaDataList))
+            throw new RuntimeException("row or column empty");
+        if(row.size()!=columnMetaDataList.size())
+            return null;
+        JSONObject json = new JSONObject();
+        //viene fatto autoboxing dell'oggetto
+        try {
+            for(int i=0; i<row.size(); i++) {
+                json.append(columnMetaDataList.get(i).getColumnName(),row.get(i));
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return json;
+    }
+
     public static Boolean embeddedJson(String primaryKey, List<JSONObject> mainTableJsonList, Map<String,List<JSONObject>> foreignKeys) {
         try {
             for(JSONObject json : mainTableJsonList) {

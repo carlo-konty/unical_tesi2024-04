@@ -46,19 +46,19 @@ public class TestController {
         }
     }
 
-    @GetMapping("/fetch")
-    public ResponseEntity<String> fetch() {
+    @GetMapping("/thread")
+    public ResponseEntity<String> thread() {
         try {
-            return ResponseEntity.ok(this.migrationService.testFetch());
+            return ResponseEntity.ok(this.migrationService.testThreadResultSet("migration","customers"));
         } catch (Exception e) {
             return ResponseEntity.ok(e.getMessage());
         }
     }
 
-    @GetMapping("/thread")
-    public ResponseEntity<String> thread() {
+    @GetMapping("embed")
+    public ResponseEntity<?> tst() {
         try {
-            return ResponseEntity.ok(this.migrationService.testThreadResultSet("migration","customers"));
+            return ResponseEntity.ok(this.migrationService.migration("migration","customers"));
         } catch (Exception e) {
             return ResponseEntity.ok(e.getMessage());
         }

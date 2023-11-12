@@ -1,6 +1,6 @@
 package com.tesi.unical.controller;
 
-import com.tesi.unical.service.informationSchema.InformationSchemaService;
+import com.tesi.unical.service.informationSchema.InformationSchemaServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,8 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class InformationSchemaController {
 
     @Autowired
-    private InformationSchemaService informationSchemaService;
+    private InformationSchemaServiceInterface informationSchemaService;
 
+    @GetMapping("/schemas")
+    public ResponseEntity getSchemas() {
+        return ResponseEntity.ok(this.informationSchemaService.getSchemas());
+    }
 
     @GetMapping("/tables")
     public ResponseEntity getTableMetaData(@RequestParam("schema") String schema) {
@@ -34,6 +38,11 @@ public class InformationSchemaController {
     @GetMapping("/relationship")
     public ResponseEntity getDbMetaData(@RequestParam("schema") String schema, @RequestParam("table") String table) {
         return ResponseEntity.ok(this.informationSchemaService.getDBMetaData(schema, table));
+    }
+
+    @GetMapping("referential-constraints")
+    public ResponseEntity getReferentialConstraintsByTable(@RequestParam("schema") String schema, @RequestParam("table") String table) {
+        return ResponseEntity.ok(this.informationSchemaService.getReferentialConstraintsByTable(schema,table));
     }
 
     @GetMapping("/keys")

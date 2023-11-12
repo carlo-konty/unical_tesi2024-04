@@ -79,6 +79,11 @@
 			<artifactId>json</artifactId>
 			<version>20230618</version>
 		</dependency>
+		<dependency>
+			<groupId>org.jooq</groupId>
+			<artifactId>jooq-meta</artifactId>
+			<version>3.18.7</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>

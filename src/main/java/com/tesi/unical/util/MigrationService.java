@@ -33,10 +33,109 @@ public class MigrationService {
     @Autowired
     private InformationSchemaService informationSchemaService;
 
+
+    /// START TEST ///
+    public boolean migration(String schema, String table) {
+        try {
+            List<JSONObject> migration = this.testEmbedding(schema,table);
+            return this.write(migration,table);
+        } catch (Exception e) {
+            log.error("error");
+            return false;
+        }
+    }
+
+    private boolean write(List<JSONObject> migration,String table) {
+        if(!Utils.isCollectionEmpty(migration)) {
+            try {
+                return FileUtils.write(table,migration);
+            } catch (Exception e) {
+                log.error("write error");
+            }
+        }
+        log.error("nothing to migrate");
+        return false;
+    }
+
+    private List<JSONObject> testEmbedding(String schema, String table) {
+        //check sulle possibili tabelle
+        this.informationSchemaService.checkTable(schema,table);
+        //inizializzazione variabili
+        Connection connection;
+        String query;
+        List<JSONObject> mainTableJsonList;
+        //recupero metadati
+        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getDBMetaData(schema,table);
+        try {
+            //get connection
+            connection = DriverManager.getConnection(url, user, psw);
+            query = QueryBuilder.selectAll(schema, table);
+            log.info(query);
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaData);
+            //creare una lista di json e scrivere nel file
+            //
+            //
+            mainTableJsonList = jsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            //
+            //
+            connection.close();
+            //
+            //embed
+            for(MetaDataDTO metaDataDTO : metaDataDTOList) {
+                for(JSONObject json : mainTableJsonList) {
+                    this.embed(json,metaDataDTO);
+                }
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return null;
+        }
+        return mainTableJsonList;
+    }
+
+    private JSONObject embed(JSONObject json,MetaDataDTO metaDataDTO) {
+        Connection connection;
+        String query;
+        List<JSONObject> mainTableJsonList = new ArrayList<>();
+        //recupero metadati
+        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
+        try {
+            //get connection
+            connection = DriverManager.getConnection(url, user, psw);
+            query = QueryBuilder.selectAll(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
+            query = QueryBuilder.where(query);
+            query = QueryBuilder.and(query,metaDataDTO.getFkColumnName(),String.valueOf(json.getInt(metaDataDTO.getReferencedColumnName())));
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaData);
+            //creare una lista di json e scrivere nel file
+            //
+            //
+            mainTableJsonList = jsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            //
+            //
+            if(!Utils.isCollectionEmpty(mainTableJsonList))
+                json.append(metaDataDTO.getFkTableName(),mainTableJsonList);
+            connection.close();
+        } catch (Exception e) {
+            log.error("error");
+        }
+        return json;
+    }
+
+
+
+
+    /// END TEST///
+
     /*questa metodologia prevede che ogni documento sia pari alla tabella, le relazioni sono modellate utilizzando
     il riferimento all'id del bson presente in mongo db
     */
-    //todo sarebbe necessario, dopo la migrazione, costruire i riferimenti direttamente in mongo db
+    //todo sarebbe necessario, dopo la migrazione, costruire i riferimenti corretti tramite chiave primaria
+    // per ogni riga estratta bisogna trovare le relazioni esterne
     public String migrateReference(String schema, String table) {
         //check sulle possibili tabelle
         this.informationSchemaService.checkTable(schema,table);
@@ -54,7 +153,7 @@ public class MigrationService {
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
             JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaData);
-            //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
+            //creare una lista di json e scrivere nel file
             //
             //
             mainTableJsonList = jsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
@@ -63,7 +162,10 @@ public class MigrationService {
         } catch (Exception e) {
             return e.getMessage();
         }
-        return FileUtils.write(table,mainTableJsonList).toString();
+        if(FileUtils.write(table,mainTableJsonList)) {
+            return "OK";
+        }
+        return "KO";
     }
 
     /*
@@ -144,23 +246,8 @@ public class MigrationService {
         return result.toString();
     }
 
-    public String testFetch() {
-        Connection connection;
-        String query;
-        Map<Long,List<Object>> result;
-        try {
-            connection = DriverManager.getConnection(url,user,psw);
-            query = QueryBuilder.selectAll("migration","customers");
-            query = QueryBuilder.fetchNRowsOnly(query,10);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            result = JsonUtils.extractResultSet(resultSet);
-        } catch (Exception e ){
-            return e.getMessage();
-        }
-        return result.toString();
-    }
 
+    //usare thread per eseguire in parallelo diverse estrazioni dal db
     public String testThreadResultSet(String schema, String table) {
         //check sulle possibili tabelle
         this.informationSchemaService.checkTable(schema,table);
@@ -180,14 +267,13 @@ public class MigrationService {
             ResultSet resultSet = statement.executeQuery(countQuery);
             //
             int count =  JsonUtils.getCount(resultSet);
-            log.info("count: {}",count);
             int rowPerThread = count / NUM_THREAD;
             int remainsRow = count % NUM_THREAD;
             //
             //
             ConcurrentHashMap<Long,List<JSONObject>> map = new ConcurrentHashMap<>();
-            int limit = rowPerThread;
-            int offset = rowPerThread + (remainsRow > 0 ? 1 : 0);
+            int limit = rowPerThread + (remainsRow > 0 ? 1 : 0);
+            int offset = 0;
             //partenza thread
             for(Long i = 1L; i<=NUM_THREAD; i++) {
                 String subQuery = QueryBuilder.limit(query,limit,offset);
@@ -196,10 +282,7 @@ public class MigrationService {
                 Thread thread = new Thread(new ParallelJsonBuilder(i,rs,map,columnMetaData));
                 thread.start();
                 //
-                log.info("limit: {}",limit);
-                offset = limit + (remainsRow > 0 ? 1 : 0);
-                log.info("offset: {}",offset);
-                remainsRow--;
+                offset = offset + limit;
             }
             //
             //
