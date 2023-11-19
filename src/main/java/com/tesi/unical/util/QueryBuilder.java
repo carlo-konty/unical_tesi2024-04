@@ -3,8 +3,6 @@ package com.tesi.unical.util;
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.management.QueryExp;
-
 @Slf4j
 public class QueryBuilder {
 

@@ -2,7 +2,7 @@ package com.tesi.unical.util;
 
 import com.tesi.unical.entity.dto.ColumnMetaData;
 import com.tesi.unical.entity.dto.MetaDataDTO;
-import com.tesi.unical.service.informationSchema.InformationSchemaService;
+import com.tesi.unical.service.informationSchema.InformationSchemaServiceInterface;
 import com.tesi.unical.util.file.FileUtils;
 import com.tesi.unical.util.file.JsonUtils;
 import com.tesi.unical.util.file.ParallelFileWriter;
@@ -31,7 +31,7 @@ public class MigrationService {
     private final int NUM_THREAD = 16;
 
     @Autowired
-    private InformationSchemaService informationSchemaService;
+    private InformationSchemaServiceInterface informationSchemaService;
 
 
     /// START TEST ///
@@ -99,7 +99,7 @@ public class MigrationService {
     private JSONObject embed(JSONObject json,MetaDataDTO metaDataDTO) {
         Connection connection;
         String query;
-        List<JSONObject> mainTableJsonList = new ArrayList<>();
+        List<JSONObject> mainTableJsonList;
         //recupero metadati
         List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
         try {
@@ -226,24 +226,66 @@ public class MigrationService {
         return FileUtils.write(table,mainTableJsonList).toString();
     }
 
-    public String testCount() {
+    public String countEmbedding(String schema, String table) {
         Connection connection;
         String query;
-        Map<Long,List<Object>> result;
+        List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getDBMetaData(schema,table);
+        Integer count = 0;
         try {
             connection = DriverManager.getConnection(url,user,psw);
-            query = QueryBuilder.countAll("migration","customers");
-            log.info(query);
-            query = QueryBuilder.selectAll("migration","customers");
-            log.info(query);
-            query = QueryBuilder.count(query);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            result = JsonUtils.extractResultSet(resultSet);
+            if(!Utils.isCollectionEmpty(metaDataDTOList)) {
+                for (MetaDataDTO dto : metaDataDTOList) {
+                    query = QueryBuilder.join2Tables(schema, table, dto);
+                    query = QueryBuilder.count(query);
+                    log.info(query);
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery(query);
+                    resultSet.next();
+                    count = count + resultSet.getInt(1);
+                }
+            }
+            else {
+                query = QueryBuilder.countAll(schema,table);
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(query);
+                resultSet.next(); count = resultSet.getInt(1);
+            }
+            connection.close();
         } catch (Exception e ){
             return e.getMessage();
         }
-        return result.toString();
+        return count.toString();
+    }
+
+    public String countReference(String schema, String table) {
+        Connection connection;
+        String query;
+        List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getReferentialConstraintsByTable(schema,table);
+        Integer count = 0;
+        try {
+            connection = DriverManager.getConnection(url,user,psw);
+            if(!Utils.isCollectionEmpty(metaDataDTOList)) {
+                for (MetaDataDTO dto : metaDataDTOList) {
+                    query = QueryBuilder.join2Tables(schema, table, dto);
+                    query = QueryBuilder.count(query);
+                    log.info(query);
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery(query);
+                    resultSet.next();
+                    count = count + resultSet.getInt(1);
+                }
+            }
+            else {
+                query = QueryBuilder.countAll(schema,table);
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(query);
+                resultSet.next(); count = resultSet.getInt(1);
+            }
+            connection.close();
+        } catch (Exception e ){
+            return e.getMessage();
+        }
+        return count.toString();
     }
 
 
