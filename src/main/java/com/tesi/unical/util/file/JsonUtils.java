@@ -15,23 +15,15 @@ import java.util.Map;
 @Slf4j
 public class JsonUtils {
 
-    private ResultSet resultSet;
-    private List<ColumnMetaData> columnMetaDataList;
-
-    public JsonUtils(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
-        this.columnMetaDataList = columnMetaDataList;
-        this.resultSet = resultSet;
-    }
-
-    public JSONObject addField(JSONObject json, String key, Object value) {
+    public static JSONObject addField(JSONObject json, String key, Object value) {
         return new JSONObject(json.append(key,value));
     }
 
-    public JSONObject removeField(JSONObject json, String key) {
+    public static JSONObject removeField(JSONObject json, String key) {
         return new JSONObject(json.remove(key));
     }
 
-    public List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
+    public static List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();
         try {
             while(resultSet.next()) {
@@ -49,7 +41,7 @@ public class JsonUtils {
         return result;
     }
 
-    public JSONObject fillJsonByFieldsName(List<Object> row, List<ColumnMetaData> columnMetaDataList) {
+    public static JSONObject fillJsonByFieldsName(List<Object> row, List<ColumnMetaData> columnMetaDataList) {
         if(Utils.isCollectionEmpty(row) || Utils.isCollectionEmpty(columnMetaDataList))
             throw new RuntimeException("row or column empty");
         if(row.size()!=columnMetaDataList.size())

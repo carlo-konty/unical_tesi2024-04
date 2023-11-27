@@ -1,7 +1,9 @@
 package com.tesi.unical.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tesi.unical.service.informationSchema.InformationSchemaService;
 import com.tesi.unical.util.MigrationService;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -40,31 +42,31 @@ public class MigrationController {
         }
     }
 
-    @GetMapping("/embedding")
-    public ResponseEntity<String> embeddingMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
-        try {
-            return ResponseEntity.ok(this.migrationService.migrateEmbedding(schema, table));
-        } catch (Exception e) {
-            return ResponseEntity.ok(e.getMessage());
+    @GetMapping("/count")
+    public ResponseEntity<?> count(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("param") Long param) {
+        @Data
+        class Count {
+            @JsonProperty("count")
+            private String count;
+            public Count(String count) {
+                this.count = count;
+            }
         }
-    }
-
-    @GetMapping("/reference")
-    public ResponseEntity<String> referenceMigration(@RequestParam("schema") String schema, @RequestParam("table") String table) {
-        try {
-            return ResponseEntity.ok(this.migrationService.migrateReference(schema, table));
-        } catch (Exception e) {
-            return ResponseEntity.ok(e.getMessage());
+        if (param.equals(1L)) {
+            try {
+                return ResponseEntity.ok(new Count(this.migrationService.countEmbedding(schema, table)));
+            } catch (Exception e) {
+                return ResponseEntity.ok(e.getMessage());
+            }
+        } else if(param.equals(2L)) {
+            try {
+                return ResponseEntity.ok(new Count(this.migrationService.countReference(schema, table)));
+            } catch (Exception e) {
+                return ResponseEntity.ok(e.getMessage());
+            }
         }
-    }
-
-    @GetMapping("/thread")
-    public ResponseEntity<String> thread() {
-        try {
-            return ResponseEntity.ok(this.migrationService.testThreadResultSet("migration","customers"));
-        } catch (Exception e) {
-            return ResponseEntity.ok(e.getMessage());
-        }
+        else
+            return ResponseEntity.badRequest().body("404");
     }
 
     /* test embedding usando la where condition invece che join (piu lento, json leggermente rotto)*/

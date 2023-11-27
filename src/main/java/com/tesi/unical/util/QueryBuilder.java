@@ -71,4 +71,10 @@ public class QueryBuilder {
         return sb.toString();
     }
 
+    public static String orderByDesc(String query, String column) {
+        StringBuilder sb = new StringBuilder(query);
+        sb.append(" ORDER BY ").append(column).append(" DESC");
+        return sb.toString();
+    }
+
 }

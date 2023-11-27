@@ -8,8 +8,8 @@ import java.util.List;
 
 public interface InformationSchemaServiceInterface {
 
-    List<MetaDataDTO> getDBMetaData(String schema, String table);
-    List<MetaDataDTO> getReferentialConstraintsByTable(String schema, String table);
+    List<MetaDataDTO> getChildrenMetaData(String schema, String table);
+    List<MetaDataDTO> getParentsMetaData(String schema, String table);
     List<ColumnMetaData> getColumnMetaDataByTable(String schema, String table);
     List<TableMetaData> getTableMetaDataBySchema(String schema);
     List<String> getAllTables(String schema);

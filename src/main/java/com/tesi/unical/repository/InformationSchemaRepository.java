@@ -35,7 +35,7 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "                        AND KCU2.ORDINAL_POSITION = KCU1.ORDINAL_POSITION\n" +
             "where kcu2.table_name = :table\n" +
             "and kcu2.table_schema = :schema",nativeQuery = true)
-    List<MetaDataDTO> getDbMetaData(@Param("schema") String schema, @Param("table") String table);
+    List<MetaDataDTO> getChildrenMetaData(@Param("schema") String schema, @Param("table") String table);
 
     @Query(value = "SELECT\n" +
             "     KCU1.CONSTRAINT_NAME AS fkConstraintName\n" +
@@ -60,7 +60,7 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "                        AND KCU2.ORDINAL_POSITION = KCU1.ORDINAL_POSITION\n" +
             "where kcu1.table_name = :table\n" +
             "and kcu1.table_schema = :schema",nativeQuery = true)
-    List<MetaDataDTO> getReferentialConstraintsByTable(@Param("schema") String schema, @Param("table") String table);
+    List<MetaDataDTO> getParentsMetaData(@Param("schema") String schema, @Param("table") String table);
 
     @Query(value = "select tabs.table_name tableName, \n" +
             "\t   tabs.table_schema tableSchema,  \n" +

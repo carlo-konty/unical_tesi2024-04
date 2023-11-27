@@ -25,9 +25,9 @@ public class ParallelJsonBuilder implements Runnable {
     @Override
     public void run() {
         try {
-            JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaDataList);
-            List<JSONObject> jsonUtilsList = jsonUtils.fillJsonListByColumnName(resultSet,columnMetaDataList);
-            map.put(id,jsonUtilsList);
+            //JsonUtils jsonUtils = new JsonUtils(resultSet,columnMetaDataList);
+            //List<JSONObject> jsonUtilsList = jsonUtils.fillJsonListByColumnName(resultSet,columnMetaDataList);
+            //map.put(id,jsonUtilsList);
         } catch (Exception e) {
             return;
         }

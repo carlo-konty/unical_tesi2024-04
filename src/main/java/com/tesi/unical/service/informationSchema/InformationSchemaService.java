@@ -20,12 +20,12 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
         return this.informationSchemaRepository.getSchemas();
     }
 
-    public List<MetaDataDTO> getDBMetaData(String schema, String table) {
-        return this.informationSchemaRepository.getDbMetaData(schema,table);
+    public List<MetaDataDTO> getChildrenMetaData(String schema, String table) {
+        return this.informationSchemaRepository.getChildrenMetaData(schema,table);
     }
 
-    public List<MetaDataDTO> getReferentialConstraintsByTable(String schema, String table) {
-        return this.informationSchemaRepository.getReferentialConstraintsByTable(schema,table);
+    public List<MetaDataDTO> getParentsMetaData(String schema, String table) {
+        return this.informationSchemaRepository.getParentsMetaData(schema,table);
     }
 
     public List<ColumnMetaData> getColumnMetaDataByTable(String schema, String table) {
