@@ -37,7 +37,7 @@ public class InformationSchemaController {
 
     @GetMapping("/columns")
     public ResponseEntity getColumnsMetaData(@RequestParam("schema") String schema, @RequestParam("table") String table) {
-        return ResponseEntity.ok(this.informationSchemaService.getColumnMetaDataByTable(schema,table));
+        return ResponseEntity.ok(this.informationSchemaService.getColumnNamesByTable(schema,table));
     }
 
     @GetMapping("/relationship")

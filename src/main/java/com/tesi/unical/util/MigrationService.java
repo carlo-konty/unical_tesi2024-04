@@ -1,6 +1,5 @@
 package com.tesi.unical.util;
 
-import com.tesi.unical.entity.dto.ColumnMetaData;
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import com.tesi.unical.service.informationSchema.InformationSchemaServiceInterface;
 import com.tesi.unical.util.file.FileUtils;
@@ -66,7 +65,7 @@ public class MigrationService implements MigrationInterface {
         String query;
         List<JSONObject> mainTableJsonList;
         //recupero metadati
-        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema, table);
         List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getChildrenMetaData(schema,table);
         try {
             //get connection
@@ -78,7 +77,7 @@ public class MigrationService implements MigrationInterface {
             //creare una lista di json e scrivere nel file
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnMetaData);
             //
             //
             connection.close();
@@ -101,7 +100,7 @@ public class MigrationService implements MigrationInterface {
         String query;
         List<JSONObject> mainTableJsonList;
         //recupero metadati
-        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
+        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
@@ -113,7 +112,7 @@ public class MigrationService implements MigrationInterface {
             //creare una lista di json e scrivere nel file
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnMetaData);
             //
             //
             if(!Utils.isCollectionEmpty(mainTableJsonList))
@@ -142,7 +141,7 @@ public class MigrationService implements MigrationInterface {
         String query;
         List<JSONObject> mainTableJsonList;
         //recupero metadati
-        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<String> columnNamesByTable = this.informationSchemaService.getColumnNamesByTable(schema, table);
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
@@ -153,7 +152,7 @@ public class MigrationService implements MigrationInterface {
             //creare una lista di json e scrivere nel file
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnNamesByTable);
             //
             //
         } catch (Exception e) {
@@ -179,7 +178,7 @@ public class MigrationService implements MigrationInterface {
         List<JSONObject> parentDocuments;
         Map<String,List<JSONObject>> childrenDocuments = new HashMap<>();
         //recupero metadati
-        List<ColumnMetaData> metaDataColumns = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<String> metaDataColumns = this.informationSchemaService.getColumnNamesByTable(schema, table);
         List<MetaDataDTO> childrenMetaData = this.informationSchemaService.getChildrenMetaData(schema,table);
         String parentPrimaryKey = this.informationSchemaService.getPrimaryKey(schema,table);
         try {
@@ -191,7 +190,7 @@ public class MigrationService implements MigrationInterface {
             ResultSet resultSet = statement.executeQuery(query);
              //
             //
-            parentDocuments = JsonUtils.fillJsonListByColumnName(resultSet,metaDataColumns);
+            parentDocuments = JsonUtils.createDocumentListByColumnName(resultSet,metaDataColumns);
             //
             //
             //creare le liste delle tabelle figlie se serve
@@ -202,9 +201,9 @@ public class MigrationService implements MigrationInterface {
                     resultSet = statement.executeQuery(query);
                     log.info(query);
                     String childrenTableName = child.getFkTableName();
-                    List<JSONObject> fkResultSet = JsonUtils.fillJsonListByColumnName(
+                    List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
                             resultSet,
-                            this.informationSchemaService.getColumnMetaDataByTable(schema,child.getFkTableName())
+                            this.informationSchemaService.getColumnNamesByTable(schema,child.getFkTableName())
                     );
                     log.info("childrenTableName: {}",childrenTableName);
                     log.info("fkResultSet size: {}",fkResultSet.size());
@@ -296,7 +295,7 @@ public class MigrationService implements MigrationInterface {
         String query;
         List<JSONObject> mainTableJsonList;
         //recupero metadati
-        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema, table);
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
@@ -343,7 +342,7 @@ public class MigrationService implements MigrationInterface {
         String query;
         List<JSONObject> mainTableJsonList;
         //recupero metadati
-        List<ColumnMetaData> columnMetaData = this.informationSchemaService.getColumnMetaDataByTable(schema, table);
+        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema, table);
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
@@ -354,7 +353,7 @@ public class MigrationService implements MigrationInterface {
             //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
             //
             //
-            mainTableJsonList = JsonUtils.fillJsonListByColumnName(resultSet, columnMetaData);
+            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnMetaData);
             //
             //test thread
             String filePath = FileUtils.fileNameBuilder(table);

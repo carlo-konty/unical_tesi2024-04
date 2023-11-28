@@ -1,13 +1,11 @@
 package com.tesi.unical.service.informationSchema;
 
-import com.tesi.unical.entity.dto.ColumnMetaData;
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import com.tesi.unical.entity.dto.TableMetaData;
 import com.tesi.unical.repository.InformationSchemaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,8 +26,8 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
         return this.informationSchemaRepository.getParentsMetaData(schema,table);
     }
 
-    public List<ColumnMetaData> getColumnMetaDataByTable(String schema, String table) {
-        return this.informationSchemaRepository.getColumnMetaDataByTable(schema,table);
+    public List<String> getColumnNamesByTable(String schema, String table) {
+        return this.informationSchemaRepository.getColumnNamesByTable(schema,table);
     }
 
     public List<TableMetaData> getTableMetaDataBySchema(String schema) {
@@ -42,15 +40,6 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
 
     public String getPrimaryKey(String schema, String table) {
         return this.informationSchemaRepository.getPrimaryKey(schema,table);
-    }
-
-    public List<String> columnsType(String schema, String table) {
-        List<String> result = new ArrayList<>();
-        List<ColumnMetaData> columnMetaData = this.getColumnMetaDataByTable(schema, table);
-        for(ColumnMetaData dto : columnMetaData) {
-            result.add(dto.getDataType());
-        }
-        return result;
     }
 
     public void checkTable(String schema, String table) {

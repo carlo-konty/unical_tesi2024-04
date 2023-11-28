@@ -1,13 +1,10 @@
 package com.tesi.unical.util.file;
 
-import com.tesi.unical.entity.dto.ColumnMetaData;
 import com.tesi.unical.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -23,15 +20,15 @@ public class JsonUtils {
         return new JSONObject(json.remove(key));
     }
 
-    public static List<JSONObject> fillJsonListByColumnName(ResultSet resultSet, List<ColumnMetaData> columnMetaDataList) {
+    public static List<JSONObject> createDocumentListByColumnName(ResultSet resultSet, List<String> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();
         try {
             while(resultSet.next()) {
                 Object column;
                 JSONObject json = new JSONObject();
-                for(ColumnMetaData dto : columnMetaDataList) {
-                    column = resultSet.getObject(dto.getColumnName());
-                    json.put(dto.getColumnName(),column);
+                for(String col : columnMetaDataList) {
+                    column = resultSet.getObject(col);
+                    json.put(col,column);
                 }
                 result.add(json);
             }
@@ -41,40 +38,22 @@ public class JsonUtils {
         return result;
     }
 
-    public static JSONObject fillJsonByFieldsName(List<Object> row, List<ColumnMetaData> columnMetaDataList) {
-        if(Utils.isCollectionEmpty(row) || Utils.isCollectionEmpty(columnMetaDataList))
-            throw new RuntimeException("row or column empty");
-        if(row.size()!=columnMetaDataList.size())
-            return null;
-        JSONObject json = new JSONObject();
-        //viene fatto autoboxing dell'oggetto
+    public static Boolean embeddedJson(String primaryKey, List<JSONObject> parentDocumentList, Map<String,List<JSONObject>> childrenMap) {
         try {
-            for(int i=0; i<row.size(); i++) {
-                json.append(columnMetaDataList.get(i).getColumnName(),row.get(i));
-            }
-        } catch (Exception e) {
-            return null;
-        }
-        return json;
-    }
-
-    public static Boolean embeddedJson(String primaryKey, List<JSONObject> mainTableJsonList, Map<String,List<JSONObject>> foreignKeys) {
-        try {
-            for(JSONObject json : mainTableJsonList) {
-                for(String key : foreignKeys.keySet()) { //si spera che ci siano poche chiavi e dunque poche dipendenze
-                    List<JSONObject> foreignJsonList = foreignKeys.get(key);
+            for(JSONObject parentDocument : parentDocumentList) {
+                for(String key : childrenMap.keySet()) {
+                    List<JSONObject> foreignJsonList = childrenMap.get(key);
                     List<JSONObject> referencedJson = new LinkedList<>();
                     for(JSONObject foreignJson : foreignJsonList) {
-                        Object pk = json.get(primaryKey);
+                        Object pk = parentDocument.get(primaryKey);
                         Object fk = foreignJson.get(primaryKey);
-                        log.info("json: {}", foreignJson );
                         JSONObject jsonObject = new JSONObject(foreignJson.toString());
                         jsonObject.remove(primaryKey);
                         if(pk.equals(fk)) {
                             referencedJson.add(jsonObject);
                         }
                     }
-                    json.put(key,referencedJson);
+                    parentDocument.put(key,referencedJson);
                 }
             }
             return true;
@@ -82,42 +61,6 @@ public class JsonUtils {
             log.error("Error: {}",e.getMessage());
             return false;
         }
-    }
-
-    public static Map<Long,List<Object>> extractResultSet(ResultSet resultSet) {
-        Map<Long,List<Object>> result = new HashMap<>();
-        try {
-            Long rowId = 1L;
-            while (resultSet.next()) {
-                List<Object> row = new LinkedList<>();
-                ResultSetMetaData metaData = resultSet.getMetaData();
-                for(int i=1; i<=metaData.getColumnCount(); i++) {
-                    row.add(resultSet.getObject(i));
-                }
-                result.put(rowId,row);
-                rowId++;
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
-        return result;
-    }
-
-    public static List<Object> objectList(ResultSet resultSet) {
-        List<Object> result = new LinkedList<>();
-        try {
-            while (resultSet.next()) {
-                List<Object> row = new LinkedList<>();
-                ResultSetMetaData metaData = resultSet.getMetaData();
-                for(int i=1; i<=metaData.getColumnCount(); i++) {
-                    row.add(resultSet.getObject(i));
-                }
-                result.add(row);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
-        return result;
     }
 
     public static int getCount(ResultSet resultSet) {

@@ -1,6 +1,5 @@
 package com.tesi.unical.util.file;
 
-import com.tesi.unical.entity.dto.ColumnMetaData;
 import org.json.JSONObject;
 
 import java.sql.ResultSet;
@@ -13,9 +12,9 @@ public class ParallelJsonBuilder implements Runnable {
     private ConcurrentHashMap<Long,List<JSONObject>> map;
     private Long id;
 
-    private List<ColumnMetaData> columnMetaDataList;
+    private List<String> columnMetaDataList;
 
-    public ParallelJsonBuilder(Long id, ResultSet resultSet, ConcurrentHashMap<Long,List<JSONObject>> map, List<ColumnMetaData> columnMetaDataList) {
+    public ParallelJsonBuilder(Long id, ResultSet resultSet, ConcurrentHashMap<Long,List<JSONObject>> map, List<String> columnMetaDataList) {
         this.id = id;
         this.resultSet = resultSet;
         this.map = map;
