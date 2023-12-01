@@ -63,6 +63,35 @@ public class JsonUtils {
         }
     }
 
+    public static Boolean referenceJson(List<String> foreignKeys, List<JSONObject> childDocumentList, Map<String,List<JSONObject>> parentsMap) {
+        try {
+            for(JSONObject childDocument : childDocumentList) {
+                for(String key : parentsMap.keySet()) {
+                    log.info(key);
+                    List<JSONObject> parentDocumentList = parentsMap.get(key);
+                    List<JSONObject> referencedJson = new LinkedList<>();
+                    for(JSONObject parentDocument : parentDocumentList) {
+                        for(String fk : foreignKeys) {
+                            Object p = parentDocument.get(fk);
+                            Object f = childDocument.get(fk);
+                            JSONObject jsonObject = new JSONObject(parentDocument.toString());
+                            if (p.equals(f)) {
+                                referencedJson.add(jsonObject);
+                            }
+                        }
+                    }
+                    for(JSONObject rj : referencedJson) {
+                        childDocument.put(key,rj);
+                    }
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("Error: {}",e.getMessage());
+            return false;
+        }
+    }
+
     public static int getCount(ResultSet resultSet) {
         try {
             resultSet.next();

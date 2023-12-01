@@ -14,6 +14,7 @@ public interface InformationSchemaServiceInterface {
     List<String> getAllTables(String schema);
     List<String> getSchemas();
     String getPrimaryKey(String schema, String table);
+    List<String> getForeignKeys(String schema, String table);
     void checkTable(String schema, String table);
 
 }

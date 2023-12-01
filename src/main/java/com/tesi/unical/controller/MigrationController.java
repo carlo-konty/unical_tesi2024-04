@@ -24,19 +24,22 @@ public class MigrationController {
     private MigrationService migrationService;
 
     @GetMapping()
-    public ResponseEntity<?> migration(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("param") Long param) {
+    public ResponseEntity<?> migration(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("param") Long param, @RequestParam("limit") Long limit) {
         try {
             log.info("migration: {}",param);
+            if(limit==null || limit.equals(0L)) {
+                return ResponseEntity.badRequest().body("400");
+            }
             if (param.equals(1L)) {
                 log.info("embedding");
-                return ResponseEntity.ok(this.migrationService.migrateEmbedding(schema,table));
+                return ResponseEntity.ok(this.migrationService.migrateEmbedding(schema,table,limit));
             }
             else if (param.equals(2L)){
                 log.info("referencing");
-                return ResponseEntity.ok(this.migrationService.migrateReference(schema,table));
+                return ResponseEntity.ok(this.migrationService.migrateReference(schema,table,limit));
             }
             else
-                return ResponseEntity.ok("Wrong code");
+                return ResponseEntity.badRequest().body("400");
         } catch (Exception e) {
             return ResponseEntity.ok(e.getMessage());
         }

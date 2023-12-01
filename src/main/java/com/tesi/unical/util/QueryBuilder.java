@@ -30,7 +30,7 @@ public class QueryBuilder {
     }
 
     //costruisce la join in base alla chiave esterna che ricavo dalle query sulle viste di sistema (ipotesi le chiavi non sono composte)
-    public static String join2Tables(String schema, String table, MetaDataDTO dto) {
+    public static String join2TablesEmbedding(String schema, String table, MetaDataDTO dto) {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT * FROM ");
         sb.append(schema + "." + table + " t0 ");
@@ -43,16 +43,28 @@ public class QueryBuilder {
         return sb.toString();
     }
 
+    public static String join2TableReference(String schema, String table, MetaDataDTO dto) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT * FROM ");
+        sb.append(schema + "." + table + " t0 ");
+        sb.append("JOIN ");
+        sb.append(schema + "." + dto.getReferencedTableName() + " t1 ");
+        sb.append("ON ");
+        sb.append("t0." + dto.getFkColumnName());
+        sb.append(" = ");
+        sb.append("t1." + dto.getReferencedColumnName());
+        return sb.toString();
+    }
+
     public static String fetchNRowsOnly(String query, Integer nrows) {
         StringBuilder sb = new StringBuilder(query);
         sb.append(" FETCH FIRST " + nrows + " ROWS ONLY");
         return sb.toString();
     }
 
-    public static String limit(String query, int limit, int offset) {
+    public static String limit(String query, Long limit) {
         StringBuilder sb = new StringBuilder(query);
         sb.append(" LIMIT " + limit);
-        sb.append(" OFFSET " + offset);
         log.info("limit: {}",sb);
         return sb.toString();
     }

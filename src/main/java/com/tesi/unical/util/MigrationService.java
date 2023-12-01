@@ -133,7 +133,7 @@ public class MigrationService implements MigrationInterface {
     */
     //todo sarebbe necessario, dopo la migrazione, costruire i riferimenti corretti tramite chiave primaria
     // per ogni riga estratta bisogna trovare le relazioni esterne
-    public String migrateReference(String schema, String table) {
+    public String migrateReference(String schema, String table, Long limit) {
         //check sulle possibili tabelle
         this.informationSchemaService.checkTable(schema,table);
         //inizializzazione variabili
@@ -142,10 +142,18 @@ public class MigrationService implements MigrationInterface {
         List<JSONObject> mainTableJsonList;
         //recupero metadati
         List<String> columnNamesByTable = this.informationSchemaService.getColumnNamesByTable(schema, table);
+        List<MetaDataDTO> parents = this.informationSchemaService.getParentsMetaData(schema,table);
+        Map<String,List<JSONObject>> parentDocuments = new HashMap<>();
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
             query = QueryBuilder.selectAll(schema, table);
+            if(!Utils.isNull(limit)) {
+                query = QueryBuilder.limit(query, limit);
+            }
+            else {
+                query = QueryBuilder.limit(query, 10000L);
+            }
             log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
@@ -155,6 +163,23 @@ public class MigrationService implements MigrationInterface {
             mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnNamesByTable);
             //
             //
+            if(!Utils.isCollectionEmpty(parents)) {
+                for(MetaDataDTO parent : parents) {
+                    query = QueryBuilder.join2TableReference(schema,table,parent);
+                    resultSet = statement.executeQuery(query);
+                    log.info(query);
+                    String parentName = parent.getReferencedTableName();
+                    List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
+                            resultSet,
+                            this.informationSchemaService.getColumnNamesByTable(schema,parentName)
+                    );
+                    parentDocuments.put(parentName,fkResultSet);
+                }
+            }
+            connection.close();
+            List<String> foreignKeys = this.informationSchemaService.getForeignKeys(schema,table);
+            log.info("{}",foreignKeys);
+            JsonUtils.referenceJson(foreignKeys,mainTableJsonList,parentDocuments);
         } catch (Exception e) {
             return e.getMessage();
         }
@@ -169,7 +194,7 @@ public class MigrationService implements MigrationInterface {
     json all'interno del documento principale che stiamo creando (viene creato un file con il nome della tabella)
      */
     //todo valutare se è possibile migrare direttamente all'interno di mongo db
-    public String migrateEmbedding(String schema, String table) { //embedding
+    public String migrateEmbedding(String schema, String table, Long limit) { //embedding
         //check esistenza tabelle
         this.informationSchemaService.checkTable(schema,table);
         //inizializzazione variabili
@@ -185,6 +210,12 @@ public class MigrationService implements MigrationInterface {
             //get connection
             connection = DriverManager.getConnection(url,user,psw);
             query = QueryBuilder.selectAll(schema,table);
+            if(!Utils.isNull(limit)) {
+                query = QueryBuilder.limit(query, limit);
+            }
+            else {
+                query = QueryBuilder.limit(query, 10000L);
+            }
             log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
@@ -197,7 +228,7 @@ public class MigrationService implements MigrationInterface {
             if(!Utils.isCollectionEmpty(childrenMetaData)) {
                 log.info("String metadata size: {}",childrenMetaData.size());
                 for(MetaDataDTO child : childrenMetaData) {
-                    query = QueryBuilder.join2Tables(schema,table,child);
+                    query = QueryBuilder.join2TablesEmbedding(schema,table,child);
                     resultSet = statement.executeQuery(query);
                     log.info(query);
                     String childrenTableName = child.getFkTableName();
@@ -232,7 +263,7 @@ public class MigrationService implements MigrationInterface {
             connection = DriverManager.getConnection(url,user,psw);
             if(!Utils.isCollectionEmpty(metaDataDTOList)) {
                 for (MetaDataDTO dto : metaDataDTOList) {
-                    query = QueryBuilder.join2Tables(schema, table, dto);
+                    query = QueryBuilder.join2TablesEmbedding(schema, table, dto);
                     query = QueryBuilder.count(query);
                     log.info(query);
                     Statement statement = connection.createStatement();
@@ -263,7 +294,7 @@ public class MigrationService implements MigrationInterface {
             connection = DriverManager.getConnection(url,user,psw);
             if(!Utils.isCollectionEmpty(metaDataDTOList)) {
                 for (MetaDataDTO dto : metaDataDTOList) {
-                    query = QueryBuilder.join2Tables(schema, table, dto);
+                    query = QueryBuilder.join2TableReference(schema, table, dto);
                     query = QueryBuilder.count(query);
                     log.info(query);
                     Statement statement = connection.createStatement();
@@ -284,6 +315,8 @@ public class MigrationService implements MigrationInterface {
         }
         return count.toString();
     }
+
+    //  test run parallele  //
 
 
     //usare thread per eseguire in parallelo diverse estrazioni dal db
@@ -315,9 +348,9 @@ public class MigrationService implements MigrationInterface {
             int offset = 0;
             //partenza thread
             for(Long i = 1L; i<=NUM_THREAD; i++) {
-                String subQuery = QueryBuilder.limit(query,limit,offset);
+              //  String subQuery = QueryBuilder.limit(query,limit,offset);
                 Statement st = connection.createStatement();
-                ResultSet rs = st.executeQuery(subQuery);
+                ResultSet rs = st.executeQuery("");
                 Thread thread = new Thread(new ParallelJsonBuilder(i,rs,map,columnMetaData));
                 thread.start();
                 //
