@@ -5,6 +5,8 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +23,10 @@ public class FileUtils {
                 writer.append(json + "\n");
             }
             writer.close();
+            log.info("\n##############################\n" +
+                    " ######      END       #####\n" +
+                    " ###### {} ######\n" +
+                    "##############################\n",new Timestamp(new Date().getTime()));
             return true;
         } catch (Exception e) {
             log.error("Exception: {}",e.getMessage());

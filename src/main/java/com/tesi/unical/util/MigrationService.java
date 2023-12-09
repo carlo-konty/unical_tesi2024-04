@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -135,6 +136,10 @@ public class MigrationService implements MigrationInterface {
     // per ogni riga estratta bisogna trovare le relazioni esterne
     public String migrateReference(String schema, String table, Long limit) {
         //check sulle possibili tabelle
+        log.info("\n##############################\n" +
+                " ######      START       #####\n" +
+                " ###### {} ######\n" +
+                "##############################\n",new Timestamp(new Date().getTime()));
         this.informationSchemaService.checkTable(schema,table);
         //inizializzazione variabili
         Connection connection;
@@ -144,6 +149,7 @@ public class MigrationService implements MigrationInterface {
         List<String> columnNamesByTable = this.informationSchemaService.getColumnNamesByTable(schema, table);
         List<MetaDataDTO> parents = this.informationSchemaService.getParentsMetaData(schema,table);
         Map<String,List<JSONObject>> parentDocuments = new HashMap<>();
+        Map<String,List<String>> parentColumns = new HashMap<>();
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
@@ -169,6 +175,7 @@ public class MigrationService implements MigrationInterface {
                     resultSet = statement.executeQuery(query);
                     log.info(query);
                     String parentName = parent.getReferencedTableName();
+                    parentColumns.put(parentName,this.informationSchemaService.getColumnNamesByTable(schema,parentName));
                     List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
                             resultSet,
                             this.informationSchemaService.getColumnNamesByTable(schema,parentName)
@@ -178,15 +185,12 @@ public class MigrationService implements MigrationInterface {
             }
             connection.close();
             List<String> foreignKeys = this.informationSchemaService.getForeignKeys(schema,table);
-            log.info("{}",foreignKeys);
-            JsonUtils.referenceJson(foreignKeys,mainTableJsonList,parentDocuments);
+            log.info("fk: {}",foreignKeys);
+            JsonUtils.referenceJson(foreignKeys,mainTableJsonList,parentDocuments,parentColumns);
         } catch (Exception e) {
             return e.getMessage();
         }
-        if(FileUtils.write(table,mainTableJsonList)) {
-            return "OK";
-        }
-        return "KO";
+        return FileUtils.write(table,mainTableJsonList).toString();
     }
 
     /*
@@ -195,6 +199,10 @@ public class MigrationService implements MigrationInterface {
      */
     //todo valutare se è possibile migrare direttamente all'interno di mongo db
     public String migrateEmbedding(String schema, String table, Long limit) { //embedding
+        log.info("\n##############################\n" +
+                " ######      START       #####\n" +
+                " ###### {} ######\n" +
+                "##############################\n",new Timestamp(new Date().getTime()));
         //check esistenza tabelle
         this.informationSchemaService.checkTable(schema,table);
         //inizializzazione variabili

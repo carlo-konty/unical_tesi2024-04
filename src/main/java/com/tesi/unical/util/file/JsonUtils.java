@@ -1,6 +1,5 @@
 package com.tesi.unical.util.file;
 
-import com.tesi.unical.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 
@@ -63,22 +62,23 @@ public class JsonUtils {
         }
     }
 
-    public static Boolean referenceJson(List<String> foreignKeys, List<JSONObject> childDocumentList, Map<String,List<JSONObject>> parentsMap) {
+    public static Boolean referenceJson(List<String> foreignKeys, List<JSONObject> childDocumentList, Map<String,List<JSONObject>> parentsMap, Map<String,List<String>> parentColumns) {
         try {
             for(JSONObject childDocument : childDocumentList) {
                 for(String key : parentsMap.keySet()) {
-                    log.info(key);
                     List<JSONObject> parentDocumentList = parentsMap.get(key);
                     List<JSONObject> referencedJson = new LinkedList<>();
                     for(JSONObject parentDocument : parentDocumentList) {
-                        for(String fk : foreignKeys) {
-                            Object p = parentDocument.get(fk);
-                            Object f = childDocument.get(fk);
-                            JSONObject jsonObject = new JSONObject(parentDocument.toString());
-                            if (p.equals(f)) {
-                                referencedJson.add(jsonObject);
+                             for(String fk : foreignKeys) {
+                                    if (parentColumns.get(key).contains(fk)) {
+                                        Object p = parentDocument.get(fk);
+                                        Object f = childDocument.get(fk);
+                                        JSONObject jsonObject = new JSONObject(parentDocument.toString());
+                                        if (p.equals(f)) {
+                                             referencedJson.add(jsonObject);
+                                        }
+                                    }
                             }
-                        }
                     }
                     for(JSONObject rj : referencedJson) {
                         childDocument.put(key,rj);

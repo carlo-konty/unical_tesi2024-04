@@ -65,19 +65,19 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "\t   tabs.table_schema tableSchema,  \n" +
             "\t   tabs.table_type tableType,\n" +
             "\t   tabs.table_catalog tableCatalog\n" +
-            "\t   from information_schema.\"tables\" tabs\n" +
+            "\t   from information_schema.tables tabs\n" +
             "\t   where tabs.table_schema = :schema\n" +
             "\t   order by tabs.table_name",nativeQuery = true)
     List<TableMetaData> getTableMetaDataBySchema(@Param(value = "schema") String schema);
 
     @Query(value = "select col.column_name columnName\n" +
-            "\t   from information_schema.\"columns\" col\n" +
+            "\t   from information_schema.columns col\n" +
             "\t   where col.table_name = :table\n" +
             "\t   and col.table_schema = :schema",nativeQuery = true)
     List<String> getColumnNamesByTable(@Param(value = "schema") String schema, @Param(value = "table") String table);
 
     @Query(value = "select t.table_name\n" +
-            "from information_schema.\"tables\" t\n" +
+            "from information_schema.tables t\n" +
             "where t.table_schema = :schema",nativeQuery = true)
     List<String> getAllTables(@Param("schema") String schema);
 
