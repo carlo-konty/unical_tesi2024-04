@@ -69,6 +69,13 @@ public class QueryBuilder {
         return sb.toString();
     }
 
+    public static String offset(String query, Long offset) {
+        StringBuilder sb = new StringBuilder(query);
+        sb.append(" OFFSET " + offset);
+        log.info("offset: {}",sb);
+        return sb.toString();
+    }
+
     public static String where(String query) {
         StringBuilder sb = new StringBuilder(query);
         sb.append(" WHERE 1=1").toString();

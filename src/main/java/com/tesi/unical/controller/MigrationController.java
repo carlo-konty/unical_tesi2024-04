@@ -1,16 +1,15 @@
 package com.tesi.unical.controller;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tesi.unical.entity.json.MigrationBody;
 import com.tesi.unical.service.informationSchema.InformationSchemaService;
 import com.tesi.unical.util.MigrationService;
+import com.tesi.unical.util.Utils;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/migration")
@@ -22,6 +21,41 @@ public class MigrationController {
 
     @Autowired
     private MigrationService migrationService;
+
+    @PostMapping()
+    public ResponseEntity<?> migrationPost(@RequestBody MigrationBody body) {
+        try {
+            if(Utils.isNull(body)) {
+                return ResponseEntity.badRequest().body("body empty");
+            }
+            log.info("migration: {}",body.getParam());
+            if(Utils.isNull(body.getLimit()) || body.getLimit().equals(0L)) {
+                return ResponseEntity.badRequest().body("400");
+            }
+            if (body.getParam().equals(1L)) {
+                log.info("embedding");
+                return ResponseEntity.ok(this.migrationService.migrateEmbeddingRefactor(
+                        body.getSchema(),
+                        body.getTable(),
+                        body.getLimit(),
+                        body.getOffset())
+                );
+            }
+            else if (body.getParam().equals(2L)){
+                log.info("referencing");
+                return ResponseEntity.ok(this.migrationService.migrateReferenceRefactor(
+                        body.getSchema(),
+                        body.getTable(),
+                        body.getLimit(),
+                        body.getOffset())
+                );
+            }
+            else
+                return ResponseEntity.badRequest().body("400");
+        } catch (Exception e) {
+            return ResponseEntity.ok(e.getMessage());
+        }
+    }
 
     @GetMapping()
     public ResponseEntity<?> migration(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("param") Long param, @RequestParam("limit") Long limit) {
