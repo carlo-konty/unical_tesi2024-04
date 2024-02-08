@@ -46,6 +46,10 @@ public class InformationSchemaService implements InformationSchemaServiceInterfa
         return this.informationSchemaRepository.getForeignKeys(schema,table);
     }
 
+    public List<String> getChildren(String schema, String table) {
+        return this.informationSchemaRepository.getChildren(schema,table);
+    }
+
     public void checkTable(String schema, String table) {
         List<String> tablesList = this.getAllTables(schema);
         if(!tablesList.contains(table))

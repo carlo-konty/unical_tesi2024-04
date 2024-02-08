@@ -127,73 +127,7 @@ public class MigrationService implements MigrationInterface {
 
     /// END TEST///
 
-
-
-    /*questa metodologia prevede che ogni documento sia pari alla tabella, le relazioni sono modellate utilizzando
-    il riferimento all'id del bson presente in mongo db
-    */
-    //todo sarebbe necessario, dopo la migrazione, costruire i riferimenti corretti tramite chiave primaria
-    // per ogni riga estratta bisogna trovare le relazioni esterne
-    @Deprecated
-    public String migrateReference(String schema, String table, Long limit) {
-        //check sulle possibili tabelle
-        log.info("\n##############################\n" +
-                " ######      START       #####\n" +
-                " ###### {} ######\n" +
-                "##############################\n",new Timestamp(new Date().getTime()));
-        this.informationSchemaService.checkTable(schema,table);
-        //inizializzazione variabili
-        Connection connection;
-        String query;
-        List<JSONObject> mainTableJsonList;
-        //recupero metadati
-        List<String> columnNamesByTable = this.informationSchemaService.getColumnNamesByTable(schema, table);
-        List<MetaDataDTO> parents = this.informationSchemaService.getParentsMetaData(schema,table);
-        Map<String,List<JSONObject>> parentDocuments = new HashMap<>();
-        Map<String,List<String>> parentColumns = new HashMap<>();
-        try {
-            //get connection
-            connection = DriverManager.getConnection(url, user, psw);
-            query = QueryBuilder.selectAll(schema, table);
-            if(!Utils.isNull(limit)) {
-                query = QueryBuilder.limit(query, limit);
-            }
-            else {
-                query = QueryBuilder.limit(query, 10000L);
-            }
-            log.info(query);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            //creare una lista di json e scrivere nel file
-            //
-            //
-            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnNamesByTable);
-            //
-            //
-            if(!Utils.isCollectionEmpty(parents)) {
-                for(MetaDataDTO parent : parents) {
-                    query = QueryBuilder.join2TableReference(schema,table,parent);
-                    resultSet = statement.executeQuery(query);
-                    log.info(query);
-                    String parentName = parent.getReferencedTableName();
-                    parentColumns.put(parentName,this.informationSchemaService.getColumnNamesByTable(schema,parentName));
-                    List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
-                            resultSet,
-                            this.informationSchemaService.getColumnNamesByTable(schema,parentName)
-                    );
-                    parentDocuments.put(parentName,fkResultSet);
-                }
-            }
-            connection.close();
-            List<String> foreignKeys = this.informationSchemaService.getForeignKeys(schema,table);
-            log.info("fk: {}",foreignKeys);
-            JsonUtils.referenceJson(foreignKeys,mainTableJsonList,parentDocuments,parentColumns);
-        } catch (Exception e) {
-            return e.getMessage();
-        }
-        return FileUtils.write(table,mainTableJsonList).toString();
-    }
-
+    //TEST SU RICORSIONE //
     public String migrateReferenceRefactor(String schema, String table, Long limit, Long offset) {
         //check sulle possibili tabelle
         log.info("\n##############################\n" +
@@ -255,13 +189,76 @@ public class MigrationService implements MigrationInterface {
         return FileUtils.write(table,mainTableJsonList).toString();
     }
 
-    /*
-    il servizio serve per migrare secondo la metodologia embedding, cioè inseriamo tutte le sottorelazioni come array di
-    json all'interno del documento principale che stiamo creando (viene creato un file con il nome della tabella)
-     */
-    //todo valutare se è possibile migrare direttamente all'interno di mongo db
+
+    /*questa metodologia prevede che ogni documento sia pari alla tabella, le relazioni sono modellate utilizzando
+    il riferimento all'id del bson presente in mongo db
+    */
+    //todo sarebbe necessario, dopo la migrazione, costruire i riferimenti corretti tramite chiave primaria
+    // per ogni riga estratta bisogna trovare le relazioni esterne
+
     @Deprecated
-    public String migrateEmbedding(String schema, String table, Long limit) { //embedding
+    public String migrateReference(String schema, String table, Long limit, Long offset) {
+        //check sulle possibili tabelle
+        log.info("\n##############################\n" +
+                " ######      START       #####\n" +
+                " ###### {} ######\n" +
+                "##############################\n",new Timestamp(new Date().getTime()));
+        this.informationSchemaService.checkTable(schema,table);
+        //inizializzazione variabili
+        Connection connection;
+        String query;
+        List<JSONObject> mainTableJsonList;
+        //recupero metadati
+        List<String> columnNamesByTable = this.informationSchemaService.getColumnNamesByTable(schema, table);
+        List<MetaDataDTO> parents = this.informationSchemaService.getParentsMetaData(schema,table);
+        Map<String,List<JSONObject>> parentDocuments = new HashMap<>();
+        Map<String,List<String>> parentColumns = new HashMap<>();
+        try {
+            //get connection
+            connection = DriverManager.getConnection(url, user, psw);
+            query = QueryBuilder.selectAll(schema, table);
+            if(!Utils.isNull(limit)) {
+                query = QueryBuilder.limit(query, limit);
+            }
+            else {
+                query = QueryBuilder.limit(query, 10000L);
+            }
+            log.info(query);
+            query = QueryBuilder.offset(query,offset);
+            log.info(query);
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            //creare una lista di json e scrivere nel file
+            //
+            //
+            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnNamesByTable);
+            //
+            //
+            if(!Utils.isCollectionEmpty(parents)) {
+                for(MetaDataDTO parent : parents) {
+                    query = QueryBuilder.join2TableReference(schema,table,parent);
+                    resultSet = statement.executeQuery(query);
+                    log.info(query);
+                    String parentName = parent.getReferencedTableName();
+                    parentColumns.put(parentName,this.informationSchemaService.getColumnNamesByTable(schema,parentName));
+                    List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
+                            resultSet,
+                            this.informationSchemaService.getColumnNamesByTable(schema,parentName)
+                    );
+                    parentDocuments.put(parentName,fkResultSet);
+                }
+            }
+            connection.close();
+            List<String> foreignKeys = this.informationSchemaService.getForeignKeys(schema,table);
+            log.info("fk: {}",foreignKeys);
+            JsonUtils.referenceJson(foreignKeys,mainTableJsonList,parentDocuments,parentColumns);
+        } catch (Exception e) {
+            return "false";
+        }
+        return FileUtils.write(table,mainTableJsonList).toString();
+    }
+
+    public String migrateEmbeddingRefactor(String schema, String table, Long limit, Long offset) { //embedding
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
                 " ###### {} ######\n" +
@@ -288,9 +285,11 @@ public class MigrationService implements MigrationInterface {
                 query = QueryBuilder.limit(query, 10000L);
             }
             log.info(query);
+            query = QueryBuilder.offset(query,offset);
+            log.info(query);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
-             //
+            //
             //
             parentDocuments = JsonUtils.createDocumentListByColumnName(resultSet,metaDataColumns);
             //
@@ -317,7 +316,7 @@ public class MigrationService implements MigrationInterface {
             //
             JsonUtils.embeddedJson(parentPrimaryKey, parentDocuments,childrenDocuments);
         } catch (Exception e) {
-            return e.getMessage();
+            return "false";
         }
         //scrive su file
         //
@@ -325,7 +324,14 @@ public class MigrationService implements MigrationInterface {
         return FileUtils.write(table, parentDocuments).toString();
     }
 
-    public String migrateEmbeddingRefactor(String schema, String table, Long limit, Long offset) { //embedding
+    /*
+    il servizio serve per migrare secondo la metodologia embedding, cioè inseriamo tutte le sottorelazioni come array di
+    json all'interno del documento principale che stiamo creando (viene creato un file con il nome della tabella)
+     */
+    //todo valutare se è possibile migrare direttamente all'interno di mongo db
+
+
+    public String migrateEmbedding(String schema, String table, Long limit, Long offset) { //embedding
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
                 " ###### {} ######\n" +
@@ -534,6 +540,27 @@ public class MigrationService implements MigrationInterface {
         return "OK";
     }
 
+    private Map<String,List<String>> getChildren(String schema, String root, Map<String,List<String>> relationships, Integer height, Integer limit) {
+        List<String> children = this.informationSchemaService.getChildren(schema,root);
+        log.info("relationships: {}",children);
+        if(height == limit || Utils.isCollectionEmpty(children))
+            return relationships;
+        else {
+            relationships.put(root, children);
+            height = height + 1;
+            for(String child : children) {
+                log.info("iterazione");
+            }
+        }
+        return relationships;
+    }
+
+    public void test() {
+        Map<String,List<String>> children = new HashMap<>();
+        getChildren("migration","customers",children,0,1);
+    }
+
+
 
     private void startThread(List<JSONObject> list, String filePath) {
         int elementsPerThread = list.size() / NUM_THREAD;
@@ -562,7 +589,5 @@ public class MigrationService implements MigrationInterface {
         }
     }
 
-
-
-
 }
+

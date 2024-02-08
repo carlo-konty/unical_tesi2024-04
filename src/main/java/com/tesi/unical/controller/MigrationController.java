@@ -34,7 +34,7 @@ public class MigrationController {
             }
             if (body.getParam().equals(1L)) {
                 log.info("embedding");
-                return ResponseEntity.ok(this.migrationService.migrateEmbeddingRefactor(
+                return ResponseEntity.ok(this.migrationService.migrateEmbedding(
                         body.getSchema(),
                         body.getTable(),
                         body.getLimit(),
@@ -43,7 +43,7 @@ public class MigrationController {
             }
             else if (body.getParam().equals(2L)){
                 log.info("referencing");
-                return ResponseEntity.ok(this.migrationService.migrateReferenceRefactor(
+                return ResponseEntity.ok(this.migrationService.migrateReference(
                         body.getSchema(),
                         body.getTable(),
                         body.getLimit(),
@@ -56,29 +56,6 @@ public class MigrationController {
             return ResponseEntity.ok(e.getMessage());
         }
     }
-
-    @GetMapping()
-    public ResponseEntity<?> migration(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("param") Long param, @RequestParam("limit") Long limit) {
-        try {
-            log.info("migration: {}",param);
-            if(limit==null || limit.equals(0L)) {
-                return ResponseEntity.badRequest().body("400");
-            }
-            if (param.equals(1L)) {
-                log.info("embedding");
-                return ResponseEntity.ok(this.migrationService.migrateEmbedding(schema,table,limit));
-            }
-            else if (param.equals(2L)){
-                log.info("referencing");
-                return ResponseEntity.ok(this.migrationService.migrateReference(schema,table,limit));
-            }
-            else
-                return ResponseEntity.badRequest().body("400");
-        } catch (Exception e) {
-            return ResponseEntity.ok(e.getMessage());
-        }
-    }
-
     @GetMapping("/count")
     public ResponseEntity<?> count(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("param") Long param) {
         @Data
@@ -113,6 +90,15 @@ public class MigrationController {
             return ResponseEntity.ok(this.migrationService.migration("migration","customers"));
         } catch (Exception e) {
             return ResponseEntity.ok(e.getMessage());
+        }
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity test(){
+        try {
+            return ResponseEntity.ok(test());
+        } catch (Exception e) {
+            return ResponseEntity.ok(e);
         }
     }
 }

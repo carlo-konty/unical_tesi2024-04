@@ -100,6 +100,14 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "AND B.POSITION_IN_UNIQUE_CONSTRAINT IS NOT NULL\n",nativeQuery = true)
     List<String> getForeignKeys(@Param("schema") String schema, @Param("table") String table);
 
+    @Query(value = "SELECT FK.TABLE_NAME\n" +
+            "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS C\n" +
+            " JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS FK ON C.CONSTRAINT_NAME = FK.CONSTRAINT_NAME\n" +
+            " JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS PK ON C.UNIQUE_CONSTRAINT_NAME = PK.CONSTRAINT_NAME\n" +
+            "WHERE PK.table_name = :table\n" +
+            "AND PK.table_schema = :schema",nativeQuery = true)
+    List<String> getChildren(@Param("schema") String schema, @Param("table") String table);
+
     @Query(value = "select schema_name from information_schema.schemata", nativeQuery = true)
     List<String> getSchemas();
 }
