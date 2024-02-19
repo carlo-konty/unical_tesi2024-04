@@ -22,10 +22,19 @@ public class QueryBuilder {
     }
 
     public static String count(String query) {
-        StringBuilder sb = new StringBuilder(query);
-        sb.insert(7,"COUNT(");
-        sb.insert(15,")");
-        log.info("count: {}",sb);
+        return query.replace("*","COUNT(*)");
+    }
+
+    public static String join(String schema, String table1, String table2, String pk) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT * FROM ");
+        sb.append(schema + "." + table1 + " t0 ");
+        sb.append("JOIN ");
+        sb.append(schema + "." + table2 + " t1 ");
+        sb.append("ON ");
+        sb.append("t0." + pk);
+        sb.append(" = ");
+        sb.append("t1." + pk);
         return sb.toString();
     }
 
@@ -41,6 +50,14 @@ public class QueryBuilder {
         sb.append(" = ");
         sb.append("t1." + dto.getFkColumnName());
         return sb.toString();
+    }
+
+    public static String leftJoin(String query) {
+        return query.replace("JOIN","LEFT JOIN");
+    }
+
+    public static String rightJoin(String query) {
+        return query.replace("JOIN","RIGHT JOIN");
     }
 
     public static String join2TableReference(String schema, String table, MetaDataDTO dto) {

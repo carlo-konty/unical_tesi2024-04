@@ -93,7 +93,7 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
 
     @Query(value = "select DISTINCT B.COLUMN_NAME\n" +
             "from information_schema.Table_constraints a\n" +
-            "join information_schema.key_column_usage b on a.table_name = b.table_name\n" +
+            "join information_schema.key_column_usagekey_column_usage b on a.table_name = b.table_name\n" +
             "where a.table_schema = :schema\n" +
             "and a.table_name = :table\n" +
             "and a.constraint_type = 'FOREIGN KEY'\n" +

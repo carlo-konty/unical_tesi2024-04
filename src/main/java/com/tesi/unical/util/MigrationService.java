@@ -4,8 +4,6 @@ import com.tesi.unical.entity.dto.MetaDataDTO;
 import com.tesi.unical.service.informationSchema.InformationSchemaServiceInterface;
 import com.tesi.unical.util.file.FileUtils;
 import com.tesi.unical.util.file.JsonUtils;
-import com.tesi.unical.util.file.ParallelFileWriter;
-import com.tesi.unical.util.file.ParallelJsonBuilder;
 import com.tesi.unical.util.interfaces.MigrationInterface;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -16,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -33,6 +30,8 @@ public class MigrationService implements MigrationInterface {
 
     @Autowired
     private InformationSchemaServiceInterface informationSchemaService;
+    @Autowired
+    private RelationshipService relationshipService;
 
 
     /// START TEST ///
@@ -128,7 +127,7 @@ public class MigrationService implements MigrationInterface {
     /// END TEST///
 
     //TEST SU RICORSIONE //
-    public String migrateReferenceRefactor(String schema, String table, Long limit, Long offset) {
+    public String migrateReferenceRefactor(String schema, String table, Long limit, Long offset, int depth) {
         //check sulle possibili tabelle
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
@@ -144,9 +143,11 @@ public class MigrationService implements MigrationInterface {
         List<MetaDataDTO> parents = this.informationSchemaService.getParentsMetaData(schema,table);
         Map<String,List<JSONObject>> parentDocuments = new HashMap<>();
         Map<String,List<String>> parentColumns = new HashMap<>();
+        Map<String,List<String>> children = getChildren(schema,table,new HashMap<>(),0,depth);
         try {
             //get connection
             connection = DriverManager.getConnection(url, user, psw);
+            //start query
             query = QueryBuilder.selectAll(schema, table);
             if(!Utils.isNull(limit)) {
                 query = QueryBuilder.limit(query, limit);
@@ -157,6 +158,7 @@ public class MigrationService implements MigrationInterface {
             log.info(query);
             query = QueryBuilder.offset(query,offset);
             log.info(query);
+            //end query
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(query);
             //creare una lista di json e scrivere nel file
@@ -258,79 +260,84 @@ public class MigrationService implements MigrationInterface {
         return FileUtils.write(table,mainTableJsonList).toString();
     }
 
-    public String migrateEmbeddingRefactor(String schema, String table, Long limit, Long offset) { //embedding
+    /////////////////////////////////////// TEST EMBEDDING RICORSIVO //////////////////////////////////////////////////////////////
+
+    public String migrateEmbeddingRecursive(String schema, String root, Long limit, Long offset, int l) {
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
                 " ###### {} ######\n" +
                 "##############################\n",new Timestamp(new Date().getTime()));
-        //check esistenza tabelle
-        this.informationSchemaService.checkTable(schema,table);
+        List<JSONObject> migration = migrateEmbeddingRefactor(schema,root,new LinkedList<>(),limit,offset,l,0);
+        return FileUtils.write(root,(Utils.isCollectionEmpty(migration) ? null : new LinkedList<>())).toString();
+    }
+
+    public List<JSONObject> migrateEmbeddingRefactor(String schema, String table, List<JSONObject> parentDocuments,Long limit, Long offset, int l,int height) { //embedding
         //inizializzazione variabili
         Connection connection;
         String query;
-        List<JSONObject> parentDocuments;
         Map<String,List<JSONObject>> childrenDocuments = new HashMap<>();
         //recupero metadati
         List<String> metaDataColumns = this.informationSchemaService.getColumnNamesByTable(schema, table);
         List<MetaDataDTO> childrenMetaData = this.informationSchemaService.getChildrenMetaData(schema,table);
         String parentPrimaryKey = this.informationSchemaService.getPrimaryKey(schema,table);
         try {
-            //get connection
-            connection = DriverManager.getConnection(url,user,psw);
-            query = QueryBuilder.selectAll(schema,table);
-            if(!Utils.isNull(limit)) {
-                query = QueryBuilder.limit(query, limit);
-            }
-            else {
-                query = QueryBuilder.limit(query, 10000L);
-            }
-            log.info(query);
-            query = QueryBuilder.offset(query,offset);
-            log.info(query);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            //
-            //
-            parentDocuments = JsonUtils.createDocumentListByColumnName(resultSet,metaDataColumns);
-            //
-            //
-            //creare le liste delle tabelle figlie se serve
-            if(!Utils.isCollectionEmpty(childrenMetaData)) {
-                log.info("String metadata size: {}",childrenMetaData.size());
-                for(MetaDataDTO child : childrenMetaData) {
-                    query = QueryBuilder.join2TablesEmbedding(schema,table,child);
-                    resultSet = statement.executeQuery(query);
+            if(l == height || Utils.isCollectionEmpty(childrenMetaData)) {
+                log.info("dentro if");
+                //get connection
+                connection = DriverManager.getConnection(url, user, psw);
+                query = QueryBuilder.selectAll(schema, table);
+                if(height == 0) {
+                    if (!Utils.isNull(limit)) {
+                        query = QueryBuilder.limit(query, limit);
+                    } else {
+                        query = QueryBuilder.limit(query, 10000L);
+                    }
                     log.info(query);
-                    String childrenTableName = child.getFkTableName();
-                    List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
-                            resultSet,
-                            this.informationSchemaService.getColumnNamesByTable(schema,child.getFkTableName())
-                    );
-                    log.info("childrenTableName: {}",childrenTableName);
-                    log.info("fkResultSet size: {}",fkResultSet.size());
-                    childrenDocuments.put(childrenTableName,fkResultSet);
+                    query = QueryBuilder.offset(query, offset);
+                    log.info(query);
                 }
+                height = height + 1;
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(query);
+                //
+                parentDocuments = JsonUtils.createDocumentListByColumnName(resultSet, metaDataColumns);
+                //
+                //creare le liste delle tabelle figlie se serve
+                if (!Utils.isCollectionEmpty(childrenMetaData)) {
+                    log.info("String metadata size: {}", childrenMetaData.size());
+                    for (MetaDataDTO child : childrenMetaData) {
+                        query = QueryBuilder.join2TablesEmbedding(schema, table, child);
+                        resultSet = statement.executeQuery(query);
+                        log.info(query);
+                        String childrenTableName = child.getFkTableName();
+                        List<JSONObject> fkResultSet = JsonUtils.createDocumentListByColumnName(
+                                resultSet,
+                                this.informationSchemaService.getColumnNamesByTable(schema, child.getFkTableName())
+                        );
+                        log.info("childrenTableName: {}", childrenTableName);
+                        log.info("fkResultSet size: {}", fkResultSet.size());
+                        childrenDocuments.put(childrenTableName, fkResultSet);
+                        return migrateEmbeddingRefactor(schema,child.getFkTableName(),parentDocuments,0L,0L,l,height);
+                    }
+                }
+                connection.close();
+                JsonUtils.embeddedJson(parentPrimaryKey, parentDocuments,childrenDocuments);
+                return parentDocuments;
             }
-            connection.close();
             //crea se serve il json finale
-            //
-            JsonUtils.embeddedJson(parentPrimaryKey, parentDocuments,childrenDocuments);
         } catch (Exception e) {
-            return "false";
+            return null;
         }
-        //scrive su file
-        //
-        //
-        return FileUtils.write(table, parentDocuments).toString();
+        return parentDocuments;
     }
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /*
     il servizio serve per migrare secondo la metodologia embedding, cioè inseriamo tutte le sottorelazioni come array di
     json all'interno del documento principale che stiamo creando (viene creato un file con il nome della tabella)
      */
-    //todo valutare se è possibile migrare direttamente all'interno di mongo db
-
-
     public String migrateEmbedding(String schema, String table, Long limit, Long offset) { //embedding
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
@@ -397,6 +404,8 @@ public class MigrationService implements MigrationInterface {
         return FileUtils.write(table, parentDocuments).toString();
     }
 
+    //////////////////////////////////// COUNT ////////////////////////////////////////////////////////////////////////////////////
+
     public String countEmbedding(String schema, String table) {
         Connection connection;
         String query;
@@ -459,85 +468,53 @@ public class MigrationService implements MigrationInterface {
         return count.toString();
     }
 
-    //  test run parallele  //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-    //usare thread per eseguire in parallelo diverse estrazioni dal db
-    public String testThreadResultSet(String schema, String table) {
-        //check sulle possibili tabelle
-        this.informationSchemaService.checkTable(schema,table);
-        //inizializzazione variabili
+    public String getRelationship(String schema, String table1, String table2, String pk) {
         Connection connection;
         String query;
-        List<JSONObject> mainTableJsonList;
-        //recupero metadati
-        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema, table);
+        int left = 0, middle = 0, right = 0;
         try {
-            //get connection
-            connection = DriverManager.getConnection(url, user, psw);
-            query = QueryBuilder.selectAll(schema, table);
-            //count query
-            String countQuery = QueryBuilder.count(query);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(countQuery);
-            //
-            int count =  JsonUtils.getCount(resultSet);
-            int rowPerThread = count / NUM_THREAD;
-            int remainsRow = count % NUM_THREAD;
-            //
-            //
-            ConcurrentHashMap<Long,List<JSONObject>> map = new ConcurrentHashMap<>();
-            int limit = rowPerThread + (remainsRow > 0 ? 1 : 0);
-            int offset = 0;
-            //partenza thread
-            for(Long i = 1L; i<=NUM_THREAD; i++) {
-              //  String subQuery = QueryBuilder.limit(query,limit,offset);
-                Statement st = connection.createStatement();
-                ResultSet rs = st.executeQuery("");
-                Thread thread = new Thread(new ParallelJsonBuilder(i,rs,map,columnMetaData));
-                thread.start();
-                //
-                offset = offset + limit;
+            connection = DriverManager.getConnection(url,user,psw);
+            if(!Utils.isNull(pk)) {
+                    query = QueryBuilder.join(schema, table1, table2, pk);
+                    query = QueryBuilder.count(query);
+                    log.info(query);
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery(query);
+                    resultSet.next();
+                    middle = resultSet.getInt(1);
+                    resultSet = statement.executeQuery(QueryBuilder.leftJoin(query));
+                    resultSet.next();
+                    left = resultSet.getInt(1);
+                    resultSet = statement.executeQuery(QueryBuilder.rightJoin(query));
+                    resultSet.next();
+                    right = resultSet.getInt(1);
             }
-            //
-            //
-            //write file
-            FileUtils.write(table,map);
-        } catch (Exception e) {
+            connection.close();
+        } catch (Exception e ){
             return e.getMessage();
         }
-        return "OK";
+        return this.relationshipService.getRelationshipType(left,middle,right);
     }
 
-    //funziona ma non bisogna scrivere con più thread sullo stesso file altrimenti casino
-    public String testThread(String schema, String table) {
-        //check sulle possibili tabelle
-        this.informationSchemaService.checkTable(schema,table);
-        //inizializzazione variabili
-        Connection connection;
-        String query;
-        List<JSONObject> mainTableJsonList;
-        //recupero metadati
-        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema, table);
-        try {
-            //get connection
-            connection = DriverManager.getConnection(url, user, psw);
-            query = QueryBuilder.selectAll(schema, table);
-            log.info(query);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            //creare una lista di json e scrivere nel file dopo il ciclo per rimanere nell'ordine n^2
-            //
-            //
-            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnMetaData);
-            //
-            //test thread
-            String filePath = FileUtils.fileNameBuilder(table);
-            startThread(mainTableJsonList,filePath);
-        } catch (Exception e) {
-            return e.getMessage();
+    ////////////////// GET RELATIONSHIP_TYPE ////////////////////////////////////
+
+    ///////// GET CHILDREN RICORSIVO //////////////////////////////////////////////////////////////////////////////////
+
+    private Map<String,List<String>> meme(String schema, String root, Map<String,List<String>> relationships, Integer height, Integer limit) {
+        List<String> children = this.informationSchemaService.getChildren(schema,root);
+        log.info("relationships: {}",children);
+        if(height == limit || Utils.isCollectionEmpty(children))
+            return relationships;
+        else {
+            relationships.put(root, children);
+            height = height + 1;
+            for(String child : children) {
+                return meme(schema,child,relationships,height,limit);
+            }
         }
-        return "OK";
+        return relationships;
     }
 
     private Map<String,List<String>> getChildren(String schema, String root, Map<String,List<String>> relationships, Integer height, Integer limit) {
@@ -549,45 +526,26 @@ public class MigrationService implements MigrationInterface {
             relationships.put(root, children);
             height = height + 1;
             for(String child : children) {
-                log.info("iterazione");
+                return getChildren(schema,child,relationships,height,limit);
             }
         }
         return relationships;
     }
 
-    public void test() {
-        Map<String,List<String>> children = new HashMap<>();
-        getChildren("migration","customers",children,0,1);
-    }
-
-
-
-    private void startThread(List<JSONObject> list, String filePath) {
-        int elementsPerThread = list.size() / NUM_THREAD;
-        log.info("el: {}",elementsPerThread);
-        int remainingElements = list.size() % NUM_THREAD;
-        log.info("re: {}",remainingElements);
-        //
-        int startIndex = 0;
-        log.info("start: {}",startIndex);
-        int endIndex = elementsPerThread + (remainingElements > 0 ? 1 : 0);
-        log.info("end: {}",endIndex);
-        //
-        for (int i = 0; i < NUM_THREAD; i++) {
-            if(i==NUM_THREAD-1) {
-                endIndex--;
-            }
-            List<JSONObject> subArray = list.subList(startIndex,endIndex);
-            Thread thread = new Thread(new ParallelFileWriter(filePath,subArray));
-            thread.start();
-            //
-            startIndex = endIndex;
-            log.info("start: {}",startIndex);
-            endIndex = startIndex + elementsPerThread + (remainingElements > 0 ? 1 : 0);
-            log.info("end: {}",endIndex);
-            remainingElements--;
+    public Set<String> childrenNoLoop(String schema, String root,int limit) {
+        Map<String,List<String>> children = getChildren(schema,root,new HashMap<>(),0,limit);
+        Set<String> result = new HashSet<>();
+        for(Map.Entry entry : children.entrySet()) {
+            result.addAll(children.get(entry.getKey()));
         }
+        return result;
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 
 }
 

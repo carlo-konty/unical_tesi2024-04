@@ -1,5 +1,6 @@
 package com.tesi.unical.util.file;
 
+import com.tesi.unical.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 
@@ -17,42 +18,28 @@ public class FileUtils {
 
     public static Boolean write(String table, List<JSONObject> listToWrite) {
         try {
-            String fileName = getFileName(FILE_PATH + table);
-            FileWriter writer = new FileWriter(fileName);
-            for(JSONObject json : listToWrite) {
-                writer.append(json + "\n");
+            if(!Utils.isCollectionEmpty(listToWrite)) {
+                String fileName = getFileName(FILE_PATH + table);
+                FileWriter writer = new FileWriter(fileName);
+                for (JSONObject json : listToWrite) {
+                    writer.append(json + "\n");
+                }
+                writer.close();
+                log.info("\n##############################\n" +
+                        " ######      END       #####\n" +
+                        " ###### {} ######\n" +
+                        "##############################\n", new Timestamp(new Date().getTime()));
+                return true;
             }
-            writer.close();
             log.info("\n##############################\n" +
                     " ######      END       #####\n" +
                     " ###### {} ######\n" +
-                    "##############################\n",new Timestamp(new Date().getTime()));
-            return true;
+                    "##############################\n", new Timestamp(new Date().getTime()));
+            return false;
         } catch (Exception e) {
             log.error("Exception: {}",e.getMessage());
             return false;
         }
-    }
-
-    public static Boolean write(String table, Map<Long,List<JSONObject>> map) {
-        try {
-            String fileName = getFileName(FILE_PATH + table);
-            FileWriter writer = new FileWriter(fileName,true);
-            for(Map.Entry<Long,List<JSONObject>> row : map.entrySet()) {
-                for(JSONObject jsonObject : row.getValue()) {
-                    writer.write(jsonObject + "\n");
-                }
-            }
-            writer.close();
-            return true;
-        } catch (Exception e) {
-            log.error("Exception: {}",e.getMessage());
-            return false;
-        }
-    }
-
-    public static String fileNameBuilder(String table) {
-        return getFileName(FILE_PATH + table);
     }
 
     private static String getFileName(String fileName) {
