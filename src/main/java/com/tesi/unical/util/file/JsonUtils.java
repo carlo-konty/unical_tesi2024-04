@@ -1,23 +1,31 @@
 package com.tesi.unical.util.file;
 
+import com.tesi.unical.service.informationSchema.InformationSchemaService;
+import com.tesi.unical.util.QueryBuilder;
+import com.tesi.unical.util.Utils;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@Service
 public class JsonUtils {
 
-    public static JSONObject addField(JSONObject json, String key, Object value) {
-        return new JSONObject(json.append(key,value));
-    }
+    private static String url = "jdbc:postgresql://localhost:5432/tesi";
+    private static String psw = "postgres";
+    private static String user = "admin";
 
-    public static JSONObject removeField(JSONObject json, String key) {
-        return new JSONObject(json.remove(key));
-    }
 
     public static List<JSONObject> createDocumentListByColumnName(ResultSet resultSet, List<String> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();
@@ -57,7 +65,29 @@ public class JsonUtils {
             }
             return true;
         } catch (Exception e) {
-            log.error("Error: {}",e.getMessage());
+            log.error("Error 2: {}",e.getMessage());
+            return false;
+        }
+    }
+
+    public static Boolean embeddedJson(String primaryKey, List<JSONObject> parentDocumentList, String fkTable, List<JSONObject> childrenDoc) {
+        try {
+            for(JSONObject parentDocument : parentDocumentList) {
+                    List<JSONObject> referencedJson = new LinkedList<>();
+                    for(JSONObject foreignJson : childrenDoc) {
+                        Object pk = parentDocument.get(primaryKey);
+                        Object fk = foreignJson.get(primaryKey);
+                        JSONObject jsonObject = new JSONObject(foreignJson.toString());
+                        jsonObject.remove(primaryKey);
+                        if(pk.equals(fk)) {
+                            referencedJson.add(jsonObject);
+                        }
+                    }
+                    parentDocument.put(fkTable,referencedJson);
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("Error 2: {}",e.getMessage());
             return false;
         }
     }
@@ -92,12 +122,4 @@ public class JsonUtils {
         }
     }
 
-    public static int getCount(ResultSet resultSet) {
-        try {
-            resultSet.next();
-            return resultSet.getInt(1);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
 }

@@ -95,16 +95,16 @@ public class MigrationController {
     @GetMapping("/test")
     public ResponseEntity test(@RequestParam("limit") Integer limit) {
         try {
-            return ResponseEntity.ok(migrationService.migrateEmbeddingRecursive("migration","customers",10000L,0L,10));
+            return ResponseEntity.ok("migration");
         } catch (Exception e) {
             return ResponseEntity.ok(e);
         }
     }
 
-    @GetMapping("/test-loop")
+    @GetMapping("/test-migration")
     public ResponseEntity testLoop(@RequestParam("limit") Integer limit) {
         try {
-            return ResponseEntity.ok(migrationService.childrenNoLoop("migration","customers",limit));
+            return ResponseEntity.ok(migrationService.testTree("migration","customers",limit));
         } catch (Exception e) {
             return ResponseEntity.ok(e);
         }
