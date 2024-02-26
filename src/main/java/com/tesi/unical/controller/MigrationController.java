@@ -101,19 +101,19 @@ public class MigrationController {
         }
     }
 
-    @GetMapping("/test-migration")
-    public ResponseEntity testLoop(@RequestParam("limit") Integer limit) {
+    @PostMapping("/tree")
+    public ResponseEntity migrationTree(@RequestBody MigrationBody body) {
         try {
-            return ResponseEntity.ok(migrationService.testTree("migration","customers",limit));
+            return ResponseEntity.ok(migrationService.testTree(body.getSchema(), body.getTable(),body.getLimit().intValue()));
         } catch (Exception e) {
             return ResponseEntity.ok(e);
         }
     }
 
-    @GetMapping("/test-relation")
-    public ResponseEntity testRel(@RequestParam("schema") String schema, @RequestParam("table1") String table1, @RequestParam("table2") String table2, @RequestParam("pk") String pk) {
+    @GetMapping("/relation-type")
+    public ResponseEntity testRel(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("type") int type) {
         try {
-            return ResponseEntity.ok(migrationService.getRelationship(schema,table1,table2,pk));
+            return ResponseEntity.ok(migrationService.getRelationInfo(schema,table,type));
         } catch (Exception e) {
             return ResponseEntity.ok(e);
         }

@@ -2,6 +2,7 @@ package com.tesi.unical.util;
 
 import com.tesi.unical.entity.dto.MetaDataDTO;
 import com.tesi.unical.entity.json.MigrationInfo;
+import com.tesi.unical.entity.json.RelationshipInfo;
 import com.tesi.unical.service.informationSchema.InformationSchemaServiceInterface;
 import com.tesi.unical.util.file.FileUtils;
 import com.tesi.unical.util.file.JsonUtils;
@@ -214,11 +215,12 @@ public class MigrationService implements MigrationInterface {
         List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema,root);
         //
         int index = migrationTree.size() - 1;
-        for(int i=index; i>0; i--) {
+        //
+        for(int i=index; i>=0; i--) {
             List<MigrationInfo> migrationInfoList = migrationTree.get(i);
             for(MigrationInfo migrationInfo : migrationInfoList) {
                 String parent = migrationInfo.getParent();
-                query = QueryBuilder.selectAll(schema,migrationInfo.getChild());
+                query = QueryBuilder.join(schema,parent,migrationInfo.getChild(),migrationInfo.getJoinKey());
                 ResultSet resultSet = statement.executeQuery(query);
                 List<String> childColumns = informationSchemaService.getColumnNamesByTable(schema,migrationInfo.getChild());
                 List<JSONObject> childDoc = JsonUtils.createDocumentListByColumnName(resultSet,childColumns);
@@ -461,7 +463,32 @@ public class MigrationService implements MigrationInterface {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+    public List<RelationshipInfo> getRelationInfo(String schema, String table, int type) {
+        if(type == 1) {
+            List<MetaDataDTO> children = this.informationSchemaService.getChildrenMetaData(schema, table);
+            List<RelationshipInfo> res = new LinkedList<>();
+            for(MetaDataDTO dto : children) {
+                res.add(RelationshipInfo.builder()
+                        .table(dto.getFkTableName())
+                        .relationType(this.getRelationship(schema,table,dto.getFkTableName(),dto.getFkColumnName()))
+                        .build()
+                );
+            }
+            return res;
+        } else if(type == 2) {
+            List<MetaDataDTO> parents = this.informationSchemaService.getParentsMetaData(schema,table);
+            List<RelationshipInfo> res = new LinkedList<>();
+            for(MetaDataDTO dto : parents) {
+                res.add(RelationshipInfo.builder()
+                        .table(dto.getReferencedTableName())
+                        .relationType(this.getRelationship(schema,table,dto.getReferencedTableName(),dto.getReferencedColumnName()))
+                        .build()
+                );
+            }
+            return res;
+        }
+        return null;
+    }
 
 
 
