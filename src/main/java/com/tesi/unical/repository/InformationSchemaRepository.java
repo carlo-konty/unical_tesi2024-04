@@ -33,7 +33,8 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "                        AND KCU2.CONSTRAINT_NAME = RC.UNIQUE_CONSTRAINT_NAME\n" +
             "                        AND KCU2.ORDINAL_POSITION = KCU1.ORDINAL_POSITION\n" +
             "where kcu2.table_name = :table\n" +
-            "and kcu2.table_schema = :schema",nativeQuery = true)
+            "and kcu2.table_schema = :schema\n" +
+            "and KCU1.COLUMN_NAME = KCU2.COLUMN_NAME",nativeQuery = true)
     List<MetaDataDTO> getChildrenMetaData(@Param("schema") String schema, @Param("table") String table);
 
     @Query(value = "SELECT\n" +
@@ -58,7 +59,8 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
             "                        AND KCU2.CONSTRAINT_NAME = RC.UNIQUE_CONSTRAINT_NAME\n" +
             "                        AND KCU2.ORDINAL_POSITION = KCU1.ORDINAL_POSITION\n" +
             "where kcu1.table_name = :table\n" +
-            "and kcu1.table_schema = :schema",nativeQuery = true)
+            "and kcu1.table_schema = :schema\n" +
+            "and KCU1.COLUMN_NAME = KCU2.COLUMN_NAME",nativeQuery = true)
     List<MetaDataDTO> getParentsMetaData(@Param("schema") String schema, @Param("table") String table);
 
     @Query(value = "select tabs.table_name tableName, \n" +
@@ -93,7 +95,7 @@ public interface InformationSchemaRepository extends JpaRepository<InformationSc
 
     @Query(value = "select DISTINCT B.COLUMN_NAME\n" +
             "from information_schema.Table_constraints a\n" +
-            "join information_schema.key_column_usagekey_column_usage b on a.table_name = b.table_name\n" +
+            "join information_schema.key_column_usage b on a.table_name = b.table_name\n" +
             "where a.table_schema = :schema\n" +
             "and a.table_name = :table\n" +
             "and a.constraint_type = 'FOREIGN KEY'\n" +
