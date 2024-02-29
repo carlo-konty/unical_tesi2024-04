@@ -2,12 +2,9 @@ package com.tesi.unical.util.interfaces;
 
 public interface MigrationInterface {
 
-    String migrateReference(String schema, String table, Long limit, Long offset);
+    boolean migrateReference(String schema, String table, Long limit, Long offset) throws Exception;
 
-    String migrateEmbedding(String schema, String table, Long limit, Long offset);
+    boolean migrateEmbedding(String schema, String table, Long limit, Long offset) throws Exception;
 
-    String countEmbedding(String schema, String table);
-
-    String countReference(String schema, String table);
-
+    boolean migrateTree(String schema, String table, int limit) throws Exception;
 }

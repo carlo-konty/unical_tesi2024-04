@@ -2,14 +2,20 @@ package com.tesi.unical.controller;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tesi.unical.entity.json.MigrationBody;
+import com.tesi.unical.entity.json.MigrationInfo;
 import com.tesi.unical.service.informationSchema.InformationSchemaService;
 import com.tesi.unical.util.MigrationService;
 import com.tesi.unical.util.Utils;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/migration")
@@ -82,15 +88,6 @@ public class MigrationController {
             return ResponseEntity.badRequest().body("404");
     }
 
-    /* test embedding usando la where condition invece che join (piu lento, json leggermente rotto)*/
-    @GetMapping("embed")
-    public ResponseEntity<?> tst() {
-        try {
-            return ResponseEntity.ok(this.migrationService.migration("migration", "customers"));
-        } catch (Exception e) {
-            return ResponseEntity.ok(e.getMessage());
-        }
-    }
 
     @GetMapping("/test")
     public ResponseEntity test(@RequestParam("limit") Integer limit) {
@@ -104,7 +101,7 @@ public class MigrationController {
     @PostMapping("/tree")
     public ResponseEntity migrationTree(@RequestBody MigrationBody body) {
         try {
-            return ResponseEntity.ok(migrationService.testTree(body.getSchema(), body.getTable(),body.getLimit().intValue()));
+            return ResponseEntity.ok(migrationService.migrateTree(body.getSchema(), body.getTable(),body.getLimit().intValue()));
         } catch (Exception e) {
             return ResponseEntity.ok(e);
         }
@@ -114,6 +111,26 @@ public class MigrationController {
     public ResponseEntity testRel(@RequestParam("schema") String schema, @RequestParam("table") String table, @RequestParam("type") int type) {
         try {
             return ResponseEntity.ok(migrationService.getRelationInfo(schema,table,type));
+        } catch (Exception e) {
+            return ResponseEntity.ok(e);
+        }
+    }
+
+    @GetMapping("/tree")
+    public ResponseEntity testLOpp(@RequestParam("schema") String schema, @RequestParam("table") String table) {
+        try {
+            @Data
+            @AllArgsConstructor
+             class MigrationMap {
+                private int height;
+                private List<MigrationInfo> children;
+            }
+            List<MigrationMap> res = new LinkedList<>();
+            Map<Integer,List<MigrationInfo>> map = this.migrationService.childrenNoLoop(schema,table);
+            for(Map.Entry entry : map.entrySet()) {
+                res.add(new MigrationMap((Integer) entry.getKey(),(List<MigrationInfo>) entry.getValue()));
+            }
+            return ResponseEntity.ok(res);
         } catch (Exception e) {
             return ResponseEntity.ok(e);
         }

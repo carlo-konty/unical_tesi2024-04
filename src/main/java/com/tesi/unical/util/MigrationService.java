@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.swing.plaf.nimbus.State;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
@@ -29,116 +28,14 @@ public class MigrationService implements MigrationInterface {
     @Value("${spring.datasource.username}")
     private String user;
 
-    private final int NUM_THREAD = 16;
-
     @Autowired
     private InformationSchemaServiceInterface informationSchemaService;
     @Autowired
     private RelationshipService relationshipService;
 
+    ////////////////////////////////////// reference ///////////////////////////////////////////////////////////////////////////////
 
-    /// START TEST ///
-    public boolean migration(String schema, String table) {
-        try {
-            List<JSONObject> migration = this.testEmbedding(schema,table);
-            return this.write(migration,table);
-        } catch (Exception e) {
-            log.error("error");
-            return false;
-        }
-    }
-
-    private boolean write(List<JSONObject> migration,String table) {
-        if(!Utils.isCollectionEmpty(migration)) {
-            try {
-                return FileUtils.write(table,migration);
-            } catch (Exception e) {
-                log.error("write error");
-            }
-        }
-        log.error("nothing to migrate");
-        return false;
-    }
-
-    private List<JSONObject> testEmbedding(String schema, String table) {
-        //check sulle possibili tabelle
-        this.informationSchemaService.checkTable(schema,table);
-        //inizializzazione variabili
-        Connection connection;
-        String query;
-        List<JSONObject> mainTableJsonList;
-        //recupero metadati
-        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema, table);
-        List<MetaDataDTO> metaDataDTOList = this.informationSchemaService.getChildrenMetaData(schema,table);
-        try {
-            //get connection
-            connection = DriverManager.getConnection(url, user, psw);
-            query = QueryBuilder.selectAll(schema, table);
-            log.info(query);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            //creare una lista di json e scrivere nel file
-            //
-            //
-            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnMetaData);
-            //
-            //
-            connection.close();
-            //
-            //embed
-            for(MetaDataDTO metaDataDTO : metaDataDTOList) {
-                for(JSONObject json : mainTableJsonList) {
-                    this.embed(json,metaDataDTO);
-                }
-            }
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return null;
-        }
-        return mainTableJsonList;
-    }
-
-    private JSONObject embed(JSONObject json,MetaDataDTO metaDataDTO) {
-        Connection connection;
-        String query;
-        List<JSONObject> mainTableJsonList;
-        //recupero metadati
-        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
-        try {
-            //get connection
-            connection = DriverManager.getConnection(url, user, psw);
-            query = QueryBuilder.selectAll(metaDataDTO.getReferencedTableSchema(),metaDataDTO.getFkTableName());
-            query = QueryBuilder.where(query);
-            query = QueryBuilder.and(query,metaDataDTO.getFkColumnName(),String.valueOf(json.getInt(metaDataDTO.getReferencedColumnName())));
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
-            //creare una lista di json e scrivere nel file
-            //
-            //
-            mainTableJsonList = JsonUtils.createDocumentListByColumnName(resultSet, columnMetaData);
-            //
-            //
-            if(!Utils.isCollectionEmpty(mainTableJsonList))
-                json.append(metaDataDTO.getFkTableName(),mainTableJsonList);
-            connection.close();
-        } catch (Exception e) {
-            log.error("error");
-        }
-        return json;
-    }
-
-    /// END TEST///
-
-    //TEST SU RICORSIONE /
-
-    /*questa metodologia prevede che ogni documento sia pari alla tabella, le relazioni sono modellate utilizzando
-    il riferimento all'id del bson presente in mongo db
-    */
-    //todo sarebbe necessario, dopo la migrazione, costruire i riferimenti corretti tramite chiave primaria
-    // per ogni riga estratta bisogna trovare le relazioni esterne
-
-    @Deprecated
-    public String migrateReference(String schema, String table, Long limit, Long offset) {
+    public boolean migrateReference(String schema, String table, Long limit, Long offset) {
         //check sulle possibili tabelle
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
@@ -194,14 +91,14 @@ public class MigrationService implements MigrationInterface {
             log.info("fk: {}",foreignKeys);
             JsonUtils.referenceJson(foreignKeys,mainTableJsonList,parentDocuments,parentColumns);
         } catch (Exception e) {
-            return "false";
+            return false;
         }
-        return FileUtils.write(table,mainTableJsonList).toString();
+        return FileUtils.write(table,mainTableJsonList);
     }
 
-    /////////////////////////////////////// TEST albero //////////////////////////////////////////////////////////////
+    ///////////////////////////////////////  albero //////////////////////////////////////////////////////////////
 
-    public List<JSONObject> migrateTree(String schema, String root, int limit) throws Exception {
+    private List<JSONObject> migrateTreeImpl(String schema, String root, int limit) throws Exception {
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
                 " ###### {} ######\n" +
@@ -209,66 +106,57 @@ public class MigrationService implements MigrationInterface {
         Connection connection = DriverManager.getConnection(url,user,psw);
         String query;
         Statement statement = connection.createStatement();
-        //
+        ResultSet resultSet;
         Map<String,List<JSONObject>> childrenMap = new HashMap<>();
         Map<Integer,List<MigrationInfo>> migrationTree = getChildren(schema,root,new HashMap<>(),0,limit);
-        List<String> columnMetaData = this.informationSchemaService.getColumnNamesByTable(schema,root);
-        //
+        if(migrationTree.isEmpty()) {
+            query = QueryBuilder.selectAll(schema,root);
+            resultSet = statement.executeQuery(query);
+            List<String> columns = informationSchemaService.getColumnNamesByTable(schema,root);
+            return JsonUtils.createDocumentListByColumnName(resultSet,columns);
+        }
         int index = migrationTree.size() - 1;
         //
         for(int i=index; i>=0; i--) {
             List<MigrationInfo> migrationInfoList = migrationTree.get(i);
             for(MigrationInfo migrationInfo : migrationInfoList) {
                 String parent = migrationInfo.getParent();
-                query = QueryBuilder.join(schema,parent,migrationInfo.getChild(),migrationInfo.getJoinKey());
-                ResultSet resultSet = statement.executeQuery(query);
-                List<String> childColumns = informationSchemaService.getColumnNamesByTable(schema,migrationInfo.getChild());
-                List<JSONObject> childDoc = JsonUtils.createDocumentListByColumnName(resultSet,childColumns);
-                List<JSONObject> parentDocuments = childrenMap.get(parent);
-                List<String> parentColumns = this.informationSchemaService.getColumnNamesByTable(schema,parent);
-                if(!Utils.isCollectionEmpty(parentDocuments)) {
-                    JsonUtils.embeddedJson(
-                            migrationInfo.getJoinKey(),
-                            parentDocuments,
-                            migrationInfo.getChild(),
-                            childDoc);
-                } else {
+                String child = migrationInfo.getChild();
+                //
+                List<JSONObject> parentDoc = childrenMap.get(parent);
+                List<JSONObject> childDoc = childrenMap.get(child);
+                //
+                if(Utils.isCollectionEmpty(childDoc)) { //
+                    query = QueryBuilder.join(schema,parent,child,migrationInfo.getJoinKey());
+                    resultSet = statement.executeQuery(query);
+                    List<String> childColumns = informationSchemaService.getColumnNamesByTable(schema,child);
+                    childDoc = JsonUtils.createDocumentListByColumnName(resultSet, childColumns);
+                }
+                if(Utils.isCollectionEmpty(parentDoc)) {
+                    List<String> parentColumns = informationSchemaService.getColumnNamesByTable(schema,parent);
                     query = QueryBuilder.selectAll(schema,parent);
                     resultSet = statement.executeQuery(query);
-                    parentDocuments = JsonUtils.createDocumentListByColumnName(resultSet,parentColumns);
-                    JsonUtils.embeddedJson(
-                            migrationInfo.getJoinKey(),
-                            parentDocuments,
-                            migrationInfo.getChild(),
-                            childDoc
-                    );
+                    parentDoc = JsonUtils.createDocumentListByColumnName(resultSet,parentColumns);
+                    JsonUtils.embeddedJson(migrationInfo.getJoinKey(), parentDoc, child, childDoc);
+                } else {
+                    JsonUtils.embeddedJson(migrationInfo.getJoinKey(), parentDoc, child, childDoc);
                 }
-                childrenMap.put(parent,parentDocuments);
+                childrenMap.put(parent,parentDoc);
             }
         }
-        query = QueryBuilder.selectAll(schema,root);
-        ResultSet resultSet = statement.executeQuery(query);
-        List<JSONObject> rootDocument = JsonUtils.createDocumentListByColumnName(resultSet,columnMetaData);
-        JsonUtils.embeddedJson(
-                informationSchemaService.getPrimaryKey(schema,root),
-                rootDocument,
-                childrenMap);
-        log.info("{}",rootDocument);
-        return rootDocument;
+        log.info("after {}",childrenMap.get(root));
+        return childrenMap.get(root);
     }
 
-    public boolean testTree(String schema, String table, int limit) throws Exception {
-        return FileUtils.write(table,migrateTree(schema,table,limit));
+    public boolean migrateTree(String schema, String table, int limit) throws Exception {
+        return FileUtils.write(table,migrateTreeImpl(schema,table,limit));
     }
 
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////// embedding /////////////////////////////////////////////////////////////////////////////
 
-    /*
-    il servizio serve per migrare secondo la metodologia embedding, cioè inseriamo tutte le sottorelazioni come array di
-    json all'interno del documento principale che stiamo creando (viene creato un file con il nome della tabella)
-     */
-    public String migrateEmbedding(String schema, String table, Long limit, Long offset) { //embedding
+
+    public boolean migrateEmbedding(String schema, String table, Long limit, Long offset) { //embedding
         log.info("\n##############################\n" +
                 " ######      START       #####\n" +
                 " ###### {} ######\n" +
@@ -326,12 +214,12 @@ public class MigrationService implements MigrationInterface {
             //
             JsonUtils.embeddedJson(parentPrimaryKey, parentDocuments,childrenDocuments);
         } catch (Exception e) {
-            return "false";
+            return false;
         }
         //scrive su file
         //
         //
-        return FileUtils.write(table, parentDocuments).toString();
+        return FileUtils.write(table, parentDocuments);
     }
 
     //////////////////////////////////// COUNT ////////////////////////////////////////////////////////////////////////////////////
@@ -461,6 +349,11 @@ public class MigrationService implements MigrationInterface {
         return getChildren(schema,root,new HashMap<>(),0,limit);
     }
 
+    public Map<Integer,List<MigrationInfo>> childrenNoLoop(String schema, String root) {
+        return getChildren(schema,root,new HashMap<>(),0,100);
+    }
+
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public List<RelationshipInfo> getRelationInfo(String schema, String table, int type) {
@@ -489,7 +382,6 @@ public class MigrationService implements MigrationInterface {
         }
         return null;
     }
-
 
 
 }
