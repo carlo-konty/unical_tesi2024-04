@@ -1,8 +1,6 @@
 package com.tesi.unical.util;
 
 import org.springframework.stereotype.Service;
-import java.sql.ResultSet;
-
 @Service
 public class RelationshipService {
 

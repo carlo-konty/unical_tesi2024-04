@@ -1,19 +1,12 @@
 package com.tesi.unical.util.file;
 
-import com.tesi.unical.service.informationSchema.InformationSchemaService;
-import com.tesi.unical.util.QueryBuilder;
-import com.tesi.unical.util.Utils;
-import lombok.Data;
+
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
+
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -21,11 +14,6 @@ import java.util.Map;
 @Slf4j
 @Service
 public class JsonUtils {
-
-    private static String url = "jdbc:postgresql://localhost:5432/tesi";
-    private static String psw = "postgres";
-    private static String user = "admin";
-
 
     public static List<JSONObject> createDocumentListByColumnName(ResultSet resultSet, List<String> columnMetaDataList) {
         List<JSONObject> result = new LinkedList<>();

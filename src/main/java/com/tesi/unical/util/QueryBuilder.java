@@ -73,12 +73,6 @@ public class QueryBuilder {
         return sb.toString();
     }
 
-    public static String fetchNRowsOnly(String query, Integer nrows) {
-        StringBuilder sb = new StringBuilder(query);
-        sb.append(" FETCH FIRST " + nrows + " ROWS ONLY");
-        return sb.toString();
-    }
-
     public static String limit(String query, Long limit) {
         StringBuilder sb = new StringBuilder(query);
         sb.append(" LIMIT " + limit);

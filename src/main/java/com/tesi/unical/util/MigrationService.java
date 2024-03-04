@@ -144,11 +144,18 @@ public class MigrationService implements MigrationInterface {
                 childrenMap.put(parent,parentDoc);
             }
         }
-        log.info("after {}",childrenMap.get(root));
+        log.info("\n##############################\n" +
+                " ######      END MIGRATION       #####\n" +
+                " ###### {} ######\n" +
+                "##############################\n",new Timestamp(new Date().getTime()));
         return childrenMap.get(root);
     }
 
     public boolean migrateTree(String schema, String table, int limit) throws Exception {
+        log.info("\n##############################\n" +
+                " ######      START WRITE     #####\n" +
+                " ###### {} ######\n" +
+                "##############################\n",new Timestamp(new Date().getTime()));
         return FileUtils.write(table,migrateTreeImpl(schema,table,limit));
     }
 
