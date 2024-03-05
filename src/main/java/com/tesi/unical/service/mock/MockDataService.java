@@ -1,15 +1,11 @@
 package com.tesi.unical.service.mock;
 
-import com.tesi.unical.entity.AddressModel;
-import com.tesi.unical.entity.CustomersModel;
+import com.tesi.unical.entity.*;
 import com.tesi.unical.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class MockDataService {
@@ -18,12 +14,12 @@ public class MockDataService {
     private CustomerRepo customerRepo;
     @Autowired
     private AddressRepo addressRepo;
-  /*  @Autowired
+    @Autowired
     private ProductRepo productRepo;
     @Autowired
     private OrderRepo orderRepo;
     @Autowired
-    private OrderitemRepo orderitemRepo;*/
+    private OrderitemRepo orderitemRepo;
 
     private String[] names = {    "Alexander",
             "Sophia",
@@ -443,6 +439,108 @@ public class MockDataService {
             "Fiumicino", "Aprilia", "Carpi", "Bagheria", "Bitonto", "Portici", "Anzio", "Viterbo", "Vigevano", "Crotone",
             "Pomezia", "Carrara", "Caltanissetta", "Imola", "Carini", "Lucera", "Acerra", "Bisceglie", "Cerveteri"
     };
+
+    String[] products = {
+            "Electric Turbo Blender",
+            "Solar-Powered Lawn Mower",
+            "Smartphone UV Sanitizer",
+            "Portable Espresso Maker",
+            "Digital Pet Feeder",
+            "Anti-Gravity Yoga Mat",
+            "3D Printing Pen",
+            "Smart Toothbrush with AI",
+            "Virtual Reality Headset for Pets",
+            "Robotic Window Cleaner",
+            "Self-Heating Coffee Mug",
+            "Inflatable Car Roof Rack",
+            "Biodegradable Phone Case",
+            "Bluetooth Tracking Device for Keys",
+            "Collapsible Water Bottle",
+            "Holographic Projector for Smartphone",
+            "Desktop Mini Air Conditioner",
+            "Electric Shoe Dryer",
+            "USB-Powered Mini Fridge",
+            "Smart Sleep Mask with Meditation",
+            "Wireless Charging Mouse Pad",
+            "Portable Clothes Steamer",
+            "Smart Plant Watering System",
+            "Pocket-Sized Translator",
+            "Automatic Handbag Illuminator",
+            "Bluetooth Music Beanie",
+            "Folding Travel Guitar",
+            "Digital Luggage Scale",
+            "Floating Bluetooth Speaker",
+            "Heated Ice Cream Scoop",
+            "Solar-Powered Phone Charger",
+            "Self-Stirring Mug",
+            "Hydroponic Indoor Garden Kit",
+            "Voice-Activated Alarm Clock",
+            "Remote Control Outlet Switch",
+            "Inflatable Travel Pillow Hoodie",
+            "WiFi-Enabled Coffee Maker",
+            "Portable Neck Fan",
+            "Reusable Beeswax Food Wraps",
+            "Foldable Laptop Stand",
+            "Collapsible Silicone Funnel",
+            "Electric Wine Bottle Opener",
+            "Digital Photo Frame with Video Playback",
+            "Smart Light Bulb with Color Control",
+            "Motion-Activated Toilet Night Light",
+            "Adjustable Laptop Cooling Stand",
+            "Cordless Electric Wine Aerator",
+            "Bluetooth Smart Lock for Luggage",
+            "Multi-Tool Keychain",
+            "Compact Travel Umbrella with LED",
+            "Insulated Wine Tumbler with Lid",
+            "Miniature GPS Tracker for Pets",
+            "Portable Handheld Fan",
+            "Solar-Powered String Lights",
+            "Portable Waterproof Bluetooth Speaker",
+            "Smart Kitchen Scale with App",
+            "Desktop Punching Bag",
+            "WiFi-Enabled Air Purifier",
+            "Portable Car Vacuum Cleaner",
+            "Digital Luggage Tag",
+            "Smart Doorbell with Camera",
+            "Collapsible Silicone Lunch Box",
+            "Solar-Powered Backpack",
+            "Noise-Canceling Sleep Headphones",
+            "Electric Pancake Maker",
+            "Miniature Indoor Tabletop Fireplace",
+            "USB-Powered Desk Fan",
+            "Solar-Powered Camping Lantern",
+            "Folding Bicycle Helmet",
+            "Reusable Silicone Food Storage Bags",
+            "Personal Water Filter Straw",
+            "Wireless Earbuds with Charging Case",
+            "Electric Wine Bottle Chiller",
+            "Portable Solar Oven",
+            "Smart WiFi Power Strip",
+            "Inflatable Pool Float with Built-in Speaker",
+            "Digital Voice Recorder Pen",
+            "Adjustable Laptop Desk with Cooling Fan",
+            "Bluetooth Meat Thermometer",
+            "USB-Rechargeable Bike Lights",
+            "Portable Campfire Grill",
+            "Solar-Powered Outdoor Shower",
+            "Portable Hand Crank Charger",
+            "Self-Cleaning Litter Box",
+            "Smart WiFi Pet Feeder",
+            "Solar-Powered Motion Sensor Light",
+            "Wireless Charger Car Mount",
+            "Portable Espresso Machine for Car",
+            "Solar-Powered Fountain Pump",
+            "Bluetooth BBQ Grill Thermometer",
+            "Compact Binoculars with Night Vision",
+            "Reusable Stainless Steel Straws",
+            "Portable UV Sterilizer Wand",
+            "Foldable Backpack with Solar Panel Charger",
+            "Electric Fly Swatter",
+            "Bluetooth Sleep Headband with Eye Mask",
+            "Solar-Powered Pool Skimmer",
+            "Portable Electric Kettle"
+    };
+
     private void fillCustomer(int rowsNumber) {
         List<CustomersModel> a = new LinkedList<>();
         Random random = new Random();
@@ -460,25 +558,66 @@ public class MockDataService {
     }
 
     private void fillAddress(int rowsNumber) {
-        List<AddressModel> a = new LinkedList<>();
         Random random = new Random();
-        for(int i=0; i<=rowsNumber; i++) {
-            a.add(
-                    AddressModel.builder()
-                            .id(i+1L)
-                            .city(cities[random.nextInt(cities.length)])
-                            .street("123 Main Street")
-                            .country("Italy")
-                            .customerId(random.nextLong(rowsNumber))
-                            .build()
-            );
+        for(int i=1; i<=rowsNumber; i++) {
+            AddressModel model = AddressModel.builder()
+                    .id(i + 0L)
+                    .city(cities[random.nextInt(cities.length)])
+                    .street("123 Main Street")
+                    .country("Italy")
+                    .customerId(random.nextLong(rowsNumber-1)+1L)
+                    .build();
+
+            this.addressRepo.insert(model.getId(),model.getStreet(),model.getCity(),model.getCountry(),model.getCustomerId());
         }
-        this.addressRepo.saveAll(a);
+    }
+
+    private void fillOrders(int rowsNumber) {
+        Random random = new Random();
+        for(int i=1; i<=rowsNumber; i++) {
+            OrderModel model = OrderModel.builder()
+                    .id(i+0L)
+                    .orderdate(new Date())
+                    .customerid(random.nextLong(rowsNumber-1)+1)
+                    .totalamount(random.nextDouble(1000))
+                    .build();
+            this.orderRepo.insert(model.getId(),model.getOrderdate(),model.getTotalamount(),model.getCustomerid());
+        }
+    }
+
+    private void fillOrderitems(int rowsNumber) {
+        Random random = new Random();
+        for(int i=1; i<=rowsNumber; i++) {
+            OrderitemModel model = OrderitemModel.builder()
+                    .id(i + 0L)
+                    .orderid(random.nextLong(rowsNumber-1)+1)
+                    .productid(random.nextLong(rowsNumber-1)+1)
+                    .quantity(random.nextInt(10))
+                    .build();
+
+            this.orderitemRepo.insert(model.getId(),model.getOrderid(), model.getProductid(), model.getQuantity());
+        }
+    }
+
+    private void fillProducts(int rowsNumber) {
+        Random random = new Random();
+        for(int i=1; i<=rowsNumber; i++) {
+            ProductModel model = ProductModel.builder()
+                    .id(i + 0L)
+                    .name(products[random.nextInt(products.length)])
+                    .price(random.nextDouble(1000))
+                    .build();
+
+            this.productRepo.insert(model.getId(), model.getName(), model.getPrice());
+        }
     }
 
     public void fillDB(int rowsNumber) {
         this.fillCustomer(rowsNumber);
-       // this.fillAddress(rowsNumber);
+        this.fillAddress(rowsNumber);
+        this.fillProducts(rowsNumber);
+        this.fillOrders(rowsNumber);
+        this.fillOrderitems(rowsNumber);
     }
 
 
